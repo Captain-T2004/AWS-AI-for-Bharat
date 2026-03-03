@@ -125,6 +125,15 @@ class PipelineStack(cdk.Stack):
         # =====================================================================
 
         # ----- 1. Frame Extractor -----
+        ffmpeg_layer = _lambda.LayerVersion(
+            self,
+            "FFmpegLayer",
+            layer_version_name="reachezy-ffmpeg",
+            code=_lambda.Code.from_asset(os.path.join(layers_dir, "ffmpeg")),
+            compatible_runtimes=[_lambda.Runtime.PYTHON_3_12],
+            description="Static FFmpeg binary at /opt/bin/ffmpeg for video frame extraction",
+        )
+
         frame_extractor_fn = _lambda.Function(
             self,
             "FrameExtractorFn",
@@ -132,7 +141,7 @@ class PipelineStack(cdk.Stack):
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="handler.handler",
             code=_lambda.Code.from_asset(os.path.join(lambdas_dir, "frame_extractor")),
-            layers=[shared_layer],
+            layers=[shared_layer, ffmpeg_layer],
             memory_size=512,
             timeout=cdk.Duration.seconds(120),
             tracing=_lambda.Tracing.ACTIVE,
@@ -246,21 +255,32 @@ class PipelineStack(cdk.Stack):
         )
         extract_task.add_retry(**retry_config)
 
-        # Step 2 — Analyze video frames with Amazon Nova Lite (Bedrock + Guardrails)
+        # Step 2 — Analyze video frames with AI (Bedrock or Groq)
         analyze_task = sfn_tasks.LambdaInvoke(
             self,
             "AnalyzeVideo",
             lambda_function=video_analyzer_fn,
+            payload=sfn.TaskInput.from_object({
+                "video_id": sfn.JsonPath.string_at("$.extractResult.video_id"),
+                "creator_id": sfn.JsonPath.string_at("$.extractResult.creator_id"),
+                "frame_keys": sfn.JsonPath.list_at("$.extractResult.frame_keys"),
+                "duration_seconds": sfn.JsonPath.number_at("$.extractResult.duration_seconds"),
+            }),
             result_path="$.analyzeResult",
             payload_response_only=True,
         )
         analyze_task.add_retry(**retry_config)
 
-        # Step 3 — Generate embeddings with Amazon Titan Embeddings V2 (Bedrock)
+        # Step 3 — Generate embeddings
         embed_task = sfn_tasks.LambdaInvoke(
             self,
             "GenerateEmbeddings",
             lambda_function=embedding_generator_fn,
+            payload=sfn.TaskInput.from_object({
+                "video_id": sfn.JsonPath.string_at("$.analyzeResult.video_id"),
+                "creator_id": sfn.JsonPath.string_at("$.analyzeResult.creator_id"),
+                "analysis": sfn.JsonPath.object_at("$.analyzeResult.analysis"),
+            }),
             result_path="$.embedResult",
             payload_response_only=True,
         )
@@ -271,6 +291,10 @@ class PipelineStack(cdk.Stack):
             self,
             "AggregateProfile",
             lambda_function=profile_aggregator_fn,
+            payload=sfn.TaskInput.from_object({
+                "video_id": sfn.JsonPath.string_at("$.embedResult.video_id"),
+                "creator_id": sfn.JsonPath.string_at("$.embedResult.creator_id"),
+            }),
             result_path="$.aggregateResult",
             payload_response_only=True,
         )

@@ -5,69 +5,9 @@ import { useRouter } from 'next/navigation';
 import { setToken } from '@/lib/auth';
 import { api } from '@/lib/api';
 
-const features = [
-  {
-    title: 'AI Media Kit',
-    description:
-      'Get a professional, shareable portfolio generated automatically from your Instagram content. No design skills needed.',
-    icon: (
-      <svg className="h-8 w-8 text-primary-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-      </svg>
-    ),
-  },
-  {
-    title: 'Rate Benchmarking',
-    description:
-      'Know your worth. See how your rates compare to creators in the same niche and follower range across India.',
-    icon: (
-      <svg className="h-8 w-8 text-primary-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
-      </svg>
-    ),
-  },
-  {
-    title: 'Content Analytics',
-    description:
-      'Understand your unique content DNA. AI analyzes your style, energy, aesthetics, and production quality.',
-    icon: (
-      <svg className="h-8 w-8 text-primary-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z" />
-      </svg>
-    ),
-  },
-];
-
-const steps = [
-  {
-    step: '01',
-    title: 'Sign Up',
-    description: 'Connect your Instagram account securely through Facebook Login.',
-  },
-  {
-    step: '02',
-    title: 'Upload Reels',
-    description: 'Upload 3-5 of your best Instagram Reels for AI analysis.',
-  },
-  {
-    step: '03',
-    title: 'AI Analysis',
-    description: 'Our AI analyzes your content style, production quality, and engagement patterns.',
-  },
-  {
-    step: '04',
-    title: 'Get Your Kit',
-    description: 'Receive a professional media kit with rate benchmarks you can share with brands.',
-  },
-];
-
 export default function LandingPage() {
   const router = useRouter();
   const [demoLoading, setDemoLoading] = useState(false);
-
-  const handleLogin = () => {
-    router.push('/login');
-  };
 
   const handleDemo = async () => {
     setDemoLoading(true);
@@ -82,174 +22,282 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="flex flex-col">
-      {/* Navigation */}
-      <nav className="fixed top-0 z-50 w-full border-b border-white/10 bg-white/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-600">
-              <span className="text-lg font-bold text-white">R</span>
-            </div>
-            <span className="text-xl font-bold text-gray-900">ReachEzy</span>
-          </div>
+    <div className="relative flex min-h-screen flex-col bg-background-light font-display text-slate-900 antialiased">
+      {/* ── Navigation ── */}
+      <header className="sticky top-0 z-50 w-full border-b border-slate-200/60 bg-background-light/80 backdrop-blur-md">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-10">
+          {/* Logo */}
           <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white">
+              <span className="material-symbols-outlined text-2xl" aria-hidden="true">auto_awesome</span>
+            </div>
+            <h2 className="text-xl font-extrabold tracking-tight text-slate-900">ReachEzy</h2>
+          </div>
+          {/* Nav links */}
+          <nav className="hidden md:flex items-center gap-10">
+            <a className="text-sm font-semibold text-slate-600 hover:text-primary transition-colors" href="#features">Features</a>
+            <a className="text-sm font-semibold text-slate-600 hover:text-primary transition-colors" href="#how-it-works">How It Works</a>
+            <a className="text-sm font-semibold text-slate-600 hover:text-primary transition-colors" onClick={() => router.push('/login?role=brand')} href="#">For Brands</a>
+          </nav>
+          {/* CTAs */}
+          <div className="flex items-center gap-4">
             <button
-              onClick={() => router.push('/login?role=brand')}
-              className="text-sm font-medium text-gray-600 hover:text-primary-600"
+              onClick={() => router.push('/login')}
+              className="hidden sm:block text-sm font-bold text-slate-900 px-4 py-2 hover:bg-slate-200/50 rounded-lg transition-colors"
             >
-              For Brands
+              Login
             </button>
-            <button onClick={handleLogin} className="btn-primary text-sm">
+            <button
+              onClick={() => router.push('/login')}
+              className="bg-primary hover:bg-primary/90 text-white px-6 py-2.5 rounded-lg text-sm font-bold shadow-lg shadow-primary/20 transition-all active:scale-95"
+            >
               Get Started
             </button>
           </div>
         </div>
-      </nav>
+      </header>
 
-      {/* Hero */}
-      <section className="relative overflow-hidden pt-24">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary-600 via-primary-700 to-purple-800" />
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-40" />
-        <div className="relative mx-auto max-w-6xl px-4 py-24 sm:px-6 sm:py-32 lg:py-40">
-          <div className="mx-auto max-w-3xl text-center">
-            <div className="mb-6 inline-flex items-center rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-sm text-white backdrop-blur-sm">
-              Built for India&apos;s nano &amp; micro creators
-            </div>
-            <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
-              Your AI-Powered{' '}
-              <span className="bg-gradient-to-r from-yellow-200 to-orange-200 bg-clip-text text-transparent">
-                Media Kit
-              </span>
-            </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-primary-100 sm:text-xl">
-              The first free, AI-powered media kit for nano-influencers in India.
-              Get professional portfolios, rate benchmarks backed by real data,
-              and deep content analytics -- all in minutes.
-            </p>
-            <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-              <button
-                onClick={handleLogin}
-                className="inline-flex items-center gap-3 rounded-xl bg-white px-8 py-4 text-base font-semibold text-primary-700 shadow-lg transition-all duration-200 hover:bg-gray-50 hover:shadow-xl"
-              >
-                Get Started
-              </button>
-              <button
-                onClick={handleDemo}
-                disabled={demoLoading}
-                className="inline-flex items-center gap-2 rounded-xl border-2 border-white/30 px-8 py-4 text-base font-semibold text-white transition-all duration-200 hover:border-white/60 hover:bg-white/10 disabled:opacity-50"
-              >
-                {demoLoading ? 'Loading...' : 'Try Demo'}
-              </button>
-            </div>
-          </div>
-        </div>
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-gray-50 to-transparent" />
-      </section>
-
-      {/* Features */}
-      <section className="relative py-20 sm:py-28">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-              Everything you need to land brand deals
-            </h2>
-            <p className="mt-4 text-lg text-gray-600">
-              Professional tools that were previously only available to top creators,
-              now free for everyone.
-            </p>
-          </div>
-          <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {features.map((feature) => (
-              <div
-                key={feature.title}
-                className="card group transition-all duration-200 hover:border-primary-200 hover:shadow-md"
-              >
-                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary-50 transition-colors group-hover:bg-primary-100">
-                  {feature.icon}
+      <main className="flex-1">
+        {/* ── Hero ── */}
+        <section className="relative overflow-hidden px-6 py-16 lg:px-10 lg:py-24">
+          <div className="mx-auto max-w-7xl">
+            <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
+              {/* Left */}
+              <div className="flex flex-col gap-8 lg:max-w-xl">
+                <div className="inline-flex w-fit items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-primary">
+                  <span className="material-symbols-outlined text-sm leading-none" aria-hidden="true">trending_up</span>
+                  Next-Gen Influencer Platform
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {feature.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-gray-600">
-                  {feature.description}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* How it Works */}
-      <section className="border-t border-gray-200 bg-white py-20 sm:py-28">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-              How it works
-            </h2>
-            <p className="mt-4 text-lg text-gray-600">
-              From sign-up to a professional media kit in under 5 minutes.
-            </p>
-          </div>
-          <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {steps.map((item, idx) => (
-              <div key={item.step} className="relative text-center">
-                {idx < steps.length - 1 && (
-                  <div className="absolute left-1/2 top-8 hidden h-0.5 w-full bg-gradient-to-r from-primary-300 to-primary-100 lg:block" />
-                )}
-                <div className="relative mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-600 text-xl font-bold text-white shadow-lg shadow-primary-200">
-                  {item.step}
+                <h1 className="text-5xl font-black leading-[1.1] tracking-tight text-slate-900 lg:text-7xl">
+                  Turn Your Vibe into Your{' '}
+                  <span className="text-primary">Brand.</span>
+                </h1>
+
+                <p className="text-lg leading-relaxed text-slate-600">
+                  Professional media kits and AI-powered insights for India&apos;s next generation of creators.
+                  Build credibility, showcase metrics, and land premium brand deals.
+                </p>
+
+                <div className="flex flex-col gap-4 sm:flex-row">
+                  <button
+                    onClick={() => router.push('/login')}
+                    className="flex items-center justify-center gap-2 rounded-xl bg-primary px-8 py-4 text-base font-bold text-white shadow-xl shadow-primary/25 hover:-translate-y-0.5 transition-all active:scale-95"
+                  >
+                    I&apos;m a Creator
+                    <span className="material-symbols-outlined text-xl leading-none" aria-hidden="true">arrow_forward</span>
+                  </button>
+                  <button
+                    onClick={() => router.push('/login?role=brand')}
+                    className="flex items-center justify-center gap-2 rounded-xl bg-white border border-slate-200 px-8 py-4 text-base font-bold text-slate-900 hover:bg-slate-50 transition-all"
+                  >
+                    I&apos;m a Brand
+                  </button>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {item.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-gray-600">
-                  {item.description}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* CTA */}
-      <section className="py-20 sm:py-28">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-600 to-purple-700 px-8 py-16 text-center shadow-2xl sm:px-16 sm:py-20">
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-40" />
-            <div className="relative">
-              <h2 className="text-3xl font-bold text-white sm:text-4xl">
-                Ready to level up your creator career?
-              </h2>
-              <p className="mx-auto mt-4 max-w-xl text-lg text-primary-100">
-                Join thousands of Indian creators who are using AI to build
-                professional media kits and land better brand deals.
+                <div className="flex items-center gap-4 pt-2">
+                  <div className="flex -space-x-2">
+                    {['/assets/avatar-1.jpg', '/assets/avatar-2.jpg', '/assets/avatar-3.jpg'].map((src, i) => (
+                      <img
+                        key={i}
+                        src={src}
+                        alt={`Creator ${i + 1}`}
+                        className="h-10 w-10 rounded-full border-2 border-background-light object-cover"
+                      />
+                    ))}
+                  </div>
+                  <p className="text-sm font-medium text-slate-500">Join our <strong className="text-slate-700">growing network</strong></p>
+                </div>
+              </div>
+
+              {/* Right — Hero Visual Dashboard Card */}
+              <div className="relative hidden lg:block">
+                <div className="relative rounded-[2.5rem] bg-gradient-to-tr from-primary/20 via-purple-100/40 to-primary/5 p-6">
+                  {/* Mock dashboard card */}
+                  <div className="rounded-[2rem] bg-white shadow-2xl overflow-hidden border border-slate-100">
+                    {/* Card header */}
+                    <div className="bg-primary px-6 py-5 flex items-center justify-between">
+                      <div>
+                        <p className="text-white/70 text-xs font-semibold uppercase tracking-widest mb-1">Media Kit</p>
+                        <h3 className="text-white text-xl font-black">Priya Beauty</h3>
+                        <p className="text-white/80 text-sm">Beauty & Lifestyle · Mumbai</p>
+                      </div>
+                      <div className="h-16 w-16 rounded-2xl overflow-hidden border border-white/30">
+                        <img src="/assets/creators/priyabeauty.jpg" alt="Priya Beauty" className="h-full w-full object-cover" />
+                      </div>
+                    </div>
+                    {/* Stats row */}
+                    <div className="grid grid-cols-3 border-b border-slate-100">
+                      {[
+                        { label: 'Followers', value: '125K' },
+                        { label: 'Engagement', value: '4.8%' },
+                        { label: 'Per Reel', value: '₹8K' },
+                      ].map(({ label, value }) => (
+                        <div key={label} className="py-4 text-center border-r border-slate-100 last:border-0">
+                          <p className="text-xl font-black text-slate-900">{value}</p>
+                          <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">{label}</p>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Engagement bar */}
+                    <div className="px-6 py-5">
+                      <div className="flex items-center justify-between text-sm mb-2">
+                        <span className="font-semibold text-slate-700">Engagement Rate</span>
+                        <span className="font-bold text-emerald-500">+12.4%</span>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-slate-100">
+                        <div className="h-full rounded-full bg-primary" style={{ width: '74%' }} />
+                      </div>
+                      <p className="text-xs text-slate-400 mt-2">Above 74% of creators in Beauty niche</p>
+                    </div>
+                    {/* Style DNA tags */}
+                    <div className="px-6 pb-5 flex flex-wrap gap-2">
+                      {['Vibrant', 'High Energy', 'Authentic', 'Skincare'].map(tag => (
+                        <span key={tag} className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">{tag}</span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Floating rate card */}
+                  <div className="absolute -bottom-4 -right-4 bg-white rounded-2xl shadow-xl border border-slate-100 p-4 w-40">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Reel Rate</p>
+                    <p className="text-2xl font-black text-primary">₹8,000</p>
+                    <p className="text-xs text-slate-500 mt-1">Above avg ✓</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Features Grid ── */}
+        <section id="features" className="bg-white py-24">
+          <div className="mx-auto max-w-7xl px-6 lg:px-10">
+            <div className="mb-16 text-center">
+              <h2 className="text-4xl font-black tracking-tight text-slate-900">The Creator Magnet</h2>
+              <p className="mt-4 mx-auto max-w-2xl text-lg text-slate-600">
+                Stand out with professional assets designed to convert brand deals.
               </p>
-              <button
-                onClick={handleLogin}
-                className="mt-8 inline-flex items-center gap-3 rounded-xl bg-white px-8 py-4 text-base font-semibold text-primary-700 shadow-lg transition-all duration-200 hover:bg-gray-50 hover:shadow-xl"
-              >
-                Get Your Free Media Kit
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {[
+                {
+                  img: '/assets/feature-media-kits.jpg',
+                  title: 'Dynamic Media Kits',
+                  desc: 'Live-updating stats from all your social platforms in one shareable link. Impress brands with real-time data accuracy.',
+                },
+                {
+                  img: '/assets/feature-rate-cards.jpg',
+                  title: 'Real-time Rate Cards',
+                  desc: 'Standardized pricing based on industry benchmarks and your audience engagement. Know your worth and negotiate confidently.',
+                },
+                {
+                  img: '/assets/feature-ai-match.jpg',
+                  title: 'AI Vibe Match',
+                  desc: 'Our AI matches you with brands that align with your aesthetic and values — so every collaboration feels authentic.',
+                },
+              ].map((f) => (
+                <div key={f.title} className="group flex flex-col overflow-hidden rounded-3xl border border-slate-200 bg-background-light p-2 transition-all hover:shadow-xl hover:-translate-y-1">
+                  <div className="h-48 w-full rounded-2xl overflow-hidden mb-0">
+                    <img src={f.img} alt={f.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  </div>
+                  <div className="p-6">
+                    <h3 className="mb-2 text-xl font-bold text-slate-900">{f.title}</h3>
+                    <p className="text-slate-600 leading-relaxed text-sm">{f.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── How It Works ── */}
+        <section id="how-it-works" className="py-24 px-6 lg:px-10">
+          <div className="mx-auto max-w-7xl">
+            <div className="mb-16 flex flex-col gap-2">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary font-bold" aria-hidden="true">temp_preferences_custom</span>
+                <span className="text-sm font-black uppercase tracking-widest text-primary">How It Works</span>
+              </div>
+              <h2 className="text-4xl font-black tracking-tight text-slate-900 lg:text-5xl">
+                From sign-up to brand deals in minutes
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[
+                { step: '01', icon: 'person_add', title: 'Create Account', desc: 'Sign up as a creator and set up your profile with your niche and social handle.' },
+                { step: '02', icon: 'upload', title: 'Upload Content', desc: 'Upload 1-5 of your best reels for AI analysis.' },
+                { step: '03', icon: 'psychology', title: 'AI Analysis', desc: 'Groq AI analyzes your style, energy, aesthetic, and production quality.' },
+                { step: '04', icon: 'description', title: 'Get Your Kit', desc: 'Share your professional media kit URL with brands and start landing deals.' },
+              ].map((item) => (
+                <div key={item.step} className="relative flex flex-col gap-5 rounded-3xl border border-slate-200 bg-white p-8 transition-all hover:border-primary/40 hover:shadow-lg group">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-black text-primary/40 tracking-widest">{item.step}</span>
+                  </div>
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-all">
+                    <span className="material-symbols-outlined text-3xl" aria-hidden="true">{item.icon}</span>
+                  </div>
+                  <div>
+                    <h3 className="mb-2 text-xl font-bold text-slate-900">{item.title}</h3>
+                    <p className="text-slate-600 text-sm leading-relaxed">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── CTA Banner ── */}
+        <section className="mx-auto max-w-7xl px-6 pb-24 lg:px-10">
+          <div className="relative overflow-hidden rounded-[2.5rem] bg-primary px-8 py-20 text-center lg:py-32">
+            <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle at 2px 2px, rgba(255,255,255,0.08) 1px, transparent 0)", backgroundSize: "24px 24px" }} />
+            <div className="relative z-10 flex flex-col items-center gap-8">
+              <h2 className="max-w-3xl text-4xl font-black text-white lg:text-6xl">
+                Ready to elevate your content strategy?
+              </h2>
+              <p className="max-w-xl text-lg text-white/80">
+                Join the community of creators and brands shaping the future of digital influence in India.
+              </p>
+              <div className="flex flex-col gap-4 sm:flex-row">
+                <button
+                  onClick={() => router.push('/login')}
+                  className="rounded-xl bg-white px-10 py-4 text-lg font-bold text-primary transition-all hover:scale-105 active:scale-95 shadow-xl"
+                >
+                  Start Your Journey
+                </button>
+                <button
+                  onClick={handleDemo}
+                  disabled={demoLoading}
+                  className="rounded-xl border border-white/30 bg-white/10 px-10 py-4 text-lg font-bold text-white backdrop-blur-sm transition-all hover:bg-white/20 disabled:opacity-50"
+                >
+                  {demoLoading ? 'Loading...' : 'Try Demo Account'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* ── Footer ── */}
+      <footer className="border-t border-slate-200 bg-white py-12">
+        <div className="mx-auto max-w-7xl px-6 lg:px-10">
+          <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white">
+                <span className="material-symbols-outlined text-lg" aria-hidden="true">auto_awesome</span>
+              </div>
+              <h2 className="text-lg font-extrabold text-slate-900">ReachEzy</h2>
+            </div>
+            <p className="text-sm text-slate-500">© 2024 ReachEzy Technologies. Built for AI for Bharat Hackathon.</p>
+            <div className="flex gap-6">
+              <button className="text-slate-400 hover:text-primary transition-colors p-1" aria-label="Website">
+                <span className="material-symbols-outlined text-xl" aria-hidden="true">public</span>
+              </button>
+              <button className="text-slate-400 hover:text-primary transition-colors p-1" aria-label="Email">
+                <span className="material-symbols-outlined text-xl" aria-hidden="true">alternate_email</span>
               </button>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t border-gray-200 bg-white py-8">
-        <div className="mx-auto max-w-6xl px-4 text-center sm:px-6">
-          <div className="flex items-center justify-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary-600">
-              <span className="text-sm font-bold text-white">R</span>
-            </div>
-            <span className="font-semibold text-gray-900">ReachEzy</span>
-          </div>
-          <p className="mt-4 text-sm text-gray-500">
-            Built for AI for Bharat Hackathon | Powered by AWS
-          </p>
-          <p className="mt-2 text-xs text-gray-400">
-            &copy; {new Date().getFullYear()} ReachEzy. All rights reserved.
-          </p>
         </div>
       </footer>
     </div>

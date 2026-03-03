@@ -1,17 +1,14 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'] });
-
 export const metadata: Metadata = {
-  title: 'ReachEzy — AI Media Kit for Indian Creators',
+  title: 'ReachEzy — Turn Your Vibe into Your Brand',
   description:
-    'Free AI-powered media kit generator for nano-influencers. Get professional portfolios, rate benchmarks, and content analytics.',
+    "Professional AI-powered media kits and brand discovery for India's next generation of creators. Build credibility, showcase metrics, and land premium brand deals.",
   openGraph: {
-    title: 'ReachEzy — AI Media Kit for Indian Creators',
+    title: 'ReachEzy — Turn Your Vibe into Your Brand',
     description:
-      'Free AI-powered media kit generator for nano-influencers. Get professional portfolios, rate benchmarks, and content analytics.',
+      "AI-powered media kits and brand discovery for India's next generation of creators.",
     type: 'website',
   },
 };
@@ -23,8 +20,22 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
-        <main className="min-h-screen bg-gray-50">{children}</main>
+      <head>
+        {/* Google Fonts: Inter */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+          rel="stylesheet"
+        />
+        {/* Material Symbols Outlined */}
+        <link
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="bg-background-light font-display text-slate-900 antialiased">
+        {children}
       </body>
     </html>
   );

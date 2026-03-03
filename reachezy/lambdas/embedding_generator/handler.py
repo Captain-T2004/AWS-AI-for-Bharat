@@ -131,15 +131,17 @@ def handler(event, context):
     # Format embedding as pgvector-compatible string: "[0.1,0.2,...]"
     embedding_str = "[" + ",".join(str(v) for v in embedding) + "]"
 
-    # Store embedding in video_embeddings table
+    # Replace old video embedding if it exists, then insert new one
     conn = get_db_connection()
     cur = conn.cursor()
+    cur.execute(
+        "DELETE FROM video_embeddings WHERE video_id = %s",
+        (video_id,)
+    )
     cur.execute(
         """
         INSERT INTO video_embeddings (video_id, creator_id, embedding, is_creator_aggregate)
         VALUES (%s, %s, %s::vector, FALSE)
-        ON CONFLICT (video_id, is_creator_aggregate) DO UPDATE SET
-            embedding = EXCLUDED.embedding
         """,
         (video_id, creator_id, embedding_str),
     )

@@ -15,7 +15,17 @@ async function fetchAPI(path: string, options?: RequestInit) {
     },
   });
 
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  if (!res.ok) {
+    try {
+      const errData = await res.json();
+      throw new Error(errData.error || `API error: ${res.status}`);
+    } catch (e) {
+      if (e instanceof Error && e.message !== 'Unexpected end of JSON input') {
+        throw e;
+      }
+      throw new Error(`API error: ${res.status}`);
+    }
+  }
   return res.json();
 }
 
@@ -35,7 +45,17 @@ async function fetchLocal(path: string, options?: RequestInit) {
     },
   });
 
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  if (!res.ok) {
+    try {
+      const errData = await res.json();
+      throw new Error(errData.error || `API error: ${res.status}`);
+    } catch (e) {
+      if (e instanceof Error && e.message !== 'Unexpected end of JSON input') {
+        throw e;
+      }
+      throw new Error(`API error: ${res.status}`);
+    }
+  }
   return res.json();
 }
 
@@ -83,6 +103,13 @@ export const api = {
   // Analysis trigger — local route
   startAnalysis: (data: { creator_id: string }) =>
     fetchLocal('/upload/analyze', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  // Demo analysis — triggers pipeline on existing seed video records (any status)
+  demoAnalyze: (data: { creator_id: string }) =>
+    fetchLocal('/upload/demo-analyze', {
       method: 'POST',
       body: JSON.stringify(data),
     }),

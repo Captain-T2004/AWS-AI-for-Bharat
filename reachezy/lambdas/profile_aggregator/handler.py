@@ -183,15 +183,15 @@ def handler(event, context):
         aggregate_embedding = _average_embeddings(embeddings)
         embedding_str = "[" + ",".join(str(v) for v in aggregate_embedding) + "]"
 
-        # Upsert the creator aggregate embedding
+        # Upsert the creator aggregate embedding safely via Delete + Insert
+        cur.execute(
+            "DELETE FROM video_embeddings WHERE creator_id = %s AND is_creator_aggregate = TRUE",
+            (creator_id,)
+        )
         cur.execute(
             """
             INSERT INTO video_embeddings (video_id, creator_id, embedding, is_creator_aggregate)
             VALUES (%s, %s, %s::vector, TRUE)
-            ON CONFLICT (creator_id, is_creator_aggregate)
-                WHERE is_creator_aggregate = TRUE
-            DO UPDATE SET
-                embedding = EXCLUDED.embedding
             """,
             (video_id, creator_id, embedding_str),
         )

@@ -23,11 +23,8 @@ const MAX_SIZE_MB = 100;
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 const ALLOWED_TYPES = ['video/mp4', 'video/quicktime'];
 
-const DEMO_VIDEOS = [
-  { url: '/demo-videos/claude-bot-setup.mp4', name: 'claude-bot-setup.mp4' },
-  { url: '/demo-videos/india-ai-summit.mp4', name: 'india-ai-summit.mp4' },
-  { url: '/demo-videos/tcs-nqt-career.mp4', name: 'tcs-nqt-career.mp4' },
-];
+
+
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) {
@@ -44,7 +41,7 @@ export default function VideoUploader({
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isLoadingDemo, setIsLoadingDemo] = useState(false);
+  const [isDemoLoading, setIsDemoLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   // Ref to always access latest files (avoids stale closure in upload loop)
   const filesRef = useRef<FileItem[]>(files);
@@ -104,23 +101,21 @@ export default function VideoUploader({
     [validateFiles]
   );
 
-  const loadDemoVideos = async () => {
-    setIsLoadingDemo(true);
+  /**
+   * Trigger analysis on pre-existing (seed) video records for this creator.
+   * Bypasses the S3 upload step entirely — works for demo accounts.
+   */
+  const handleDemoAnalyze = async () => {
+    setIsDemoLoading(true);
     setError(null);
     try {
-      const demoFiles = await Promise.all(
-        DEMO_VIDEOS.map(async (demo) => {
-          const response = await fetch(demo.url);
-          if (!response.ok) throw new Error(`Failed to fetch ${demo.name}`);
-          const blob = await response.blob();
-          return new File([blob], demo.name, { type: 'video/mp4' });
-        })
-      );
-      addFiles(demoFiles);
+      await api.demoAnalyze({ creator_id: creatorId });
+      // Treat this the same as a completed real upload — hand off to parent
+      onComplete();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load demo videos');
+      setError(err instanceof Error ? err.message : 'Failed to start demo analysis');
     } finally {
-      setIsLoadingDemo(false);
+      setIsDemoLoading(false);
     }
   };
 
@@ -298,7 +293,7 @@ export default function VideoUploader({
         </p>
       </div>
 
-      {/* Demo Videos */}
+      {/* Demo shortcut — only shown when no files are staged */}
       {files.length === 0 && (
         <div className="flex items-center gap-4">
           <div className="h-px flex-1 bg-gray-200" />
@@ -308,14 +303,14 @@ export default function VideoUploader({
       )}
       {files.length === 0 && (
         <button
-          onClick={loadDemoVideos}
-          disabled={isLoadingDemo}
+          onClick={handleDemoAnalyze}
+          disabled={isDemoLoading}
           className="btn-secondary w-full"
         >
-          {isLoadingDemo ? (
+          {isDemoLoading ? (
             <span className="flex items-center justify-center gap-2">
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400/30 border-t-gray-600" />
-              Loading demo videos...
+              Triggering analysis...
             </span>
           ) : (
             <>
@@ -329,10 +324,10 @@ export default function VideoUploader({
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"
+                  d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"
                 />
               </svg>
-              Load 3 Demo Videos
+              Analyze Demo Content
             </>
           )}
         </button>

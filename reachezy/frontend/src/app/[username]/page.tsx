@@ -66,50 +66,54 @@ async function getMediaKitData(username: string): Promise<MediaKitData | null> {
 export default async function PublicMediaKitPage({ params }: PageProps) {
   const data = await getMediaKitData(params.username);
 
-  if (!data) {
-    return (
-      <div className="flex min-h-screen items-center justify-center px-4">
-        <div className="card max-w-md text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
-            <svg
-              className="h-8 w-8 text-gray-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
-              />
-            </svg>
+  return (
+    <div className="min-h-screen bg-background-light font-display text-slate-900 antialiased flex flex-col relative w-full overflow-x-hidden">
+      {/* ── Minimal Navbar ── */}
+      <header className="sticky top-0 z-50 flex items-center justify-between border-b border-slate-200/60 bg-white/80 backdrop-blur-md px-6 py-4">
+        <Link href="/" className="flex items-center gap-2 group">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white transition-transform group-hover:scale-105">
+            <span className="material-symbols-outlined text-sm font-bold" aria-hidden="true">auto_awesome</span>
           </div>
-          <h2 className="text-xl font-semibold text-gray-900">
-            Media Kit Not Found
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            This creator hasn&apos;t set up their media kit yet, or the username
-            is incorrect.
-          </p>
-          <Link href="/" className="btn-primary mt-6 inline-block">
-            Go to ReachEzy
+          <span className="text-sm tracking-widest text-slate-400 font-bold uppercase group-hover:text-primary transition-colors">
+            POWERED BY <strong className="text-slate-600 group-hover:text-primary">REACHEZY</strong>
+          </span>
+        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/login" className="btn-secondary text-xs py-1.5 px-4 rounded-full">
+            Create Your Own Kit
           </Link>
         </div>
-      </div>
-    );
-  }
+      </header>
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <MediaKit
-        creator={data.creator}
-        videos={data.videos || []}
-        benchmarks={data.benchmarks}
-        thumbnailUrls={data.thumbnail_urls || []}
-        rates={data.creator?.rate_card ?? undefined}
-        styleProfile={data.creator?.style_profile ?? undefined}
-      />
+      {/* ── Main Content ── */}
+      <main className="flex-1 w-full mx-auto pb-20">
+        {!data ? (
+          <div className="flex flex-col items-center justify-center mt-20 px-4">
+            <div className="bg-white rounded-[2rem] border border-slate-200 p-12 max-w-md text-center shadow-xl">
+              <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-[1.5rem] bg-slate-50 border border-slate-100">
+                <span className="material-symbols-outlined text-5xl text-slate-300">person_off</span>
+              </div>
+              <h2 className="text-2xl font-black text-slate-900 mb-3 tracking-tight">Media Kit Not Found</h2>
+              <p className="text-slate-500 text-sm leading-relaxed mb-8">
+                This creator hasn&apos;t generated their media kit yet, or the username is incorrect.
+              </p>
+              <Link href="/" className="btn-primary w-full shadow-primary-sm group">
+                Return Home
+                <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform ml-2">arrow_forward</span>
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <MediaKit
+            creator={data.creator}
+            videos={data.videos || []}
+            benchmarks={data.benchmarks}
+            thumbnailUrls={data.thumbnail_urls || []}
+            rates={data.creator?.rate_card ?? undefined}
+            styleProfile={data.creator?.style_profile ?? undefined}
+          />
+        )}
+      </main>
     </div>
   );
 }

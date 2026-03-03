@@ -1,16 +1,33 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
 import { api } from '@/lib/api';
-import { setToken, getLoginUrl } from '@/lib/auth';
+import { setToken } from '@/lib/auth';
 import { NICHES, INDUSTRIES } from '@/lib/constants';
 
 type Role = 'brand' | 'creator';
 type Mode = 'login' | 'signup';
 
-export default function LoginPage() {
+interface DemoCreator {
+  username: string;
+  display_name: string;
+  niche: string;
+  city: string;
+  followers_count: number;
+  tier: string;
+  emoji: string;
+  avatar_url?: string;
+  bio: string;
+}
+
+function formatFollowers(n: number) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
+  return String(n);
+}
+
+function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -18,407 +35,354 @@ export default function LoginPage() {
   const [mode, setMode] = useState<Mode>('login');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [demoLoading, setDemoLoading] = useState(false);
+  const [showDemoModal, setShowDemoModal] = useState(false);
+  const [demoCreators, setDemoCreators] = useState<DemoCreator[]>([]);
+  const [demoLoading, setDemoLoading] = useState<string | null>(null);
 
   // Form fields
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  // Creator fields
   const [fullName, setFullName] = useState('');
   const [instagramHandle, setInstagramHandle] = useState('');
   const [niche, setNiche] = useState('');
   const [city, setCity] = useState('');
   const [followersCount, setFollowersCount] = useState('');
   const [bio, setBio] = useState('');
-  // Brand fields
   const [companyName, setCompanyName] = useState('');
   const [industry, setIndustry] = useState('');
   const [contactName, setContactName] = useState('');
 
   useEffect(() => {
-    if (searchParams.get('role') === 'brand') {
-      setRole('brand');
-    }
+    if (searchParams.get('role') === 'brand') setRole('brand');
   }, [searchParams]);
+
+  const openDemoModal = async () => {
+    setShowDemoModal(true);
+    if (demoCreators.length === 0) {
+      try {
+        const res = await fetch('/api/auth/demo-creators');
+        if (res.ok) {
+          const data = await res.json();
+          setDemoCreators(data.creators || []);
+        }
+      } catch { /* ignore */ }
+    }
+  };
+
+  const handleDemoLogin = async (username: string) => {
+    setDemoLoading(username);
+    try {
+      const data = await api.demoLogin(username);
+      setToken(data.session_token);
+      router.push('/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Demo login failed');
+      setDemoLoading(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-
     try {
       if (mode === 'login') {
         const data = await api.login({ email, password });
         setToken(data.session_token);
-        if (data.role === 'brand') {
-          router.push('/brand/dashboard');
-        } else {
-          router.push('/dashboard');
-        }
+        router.push('/dashboard');
       } else {
-        // Signup
-        const payload: Record<string, unknown> = {
-          action: 'signup' as const,
-          role,
-          email,
-          password,
-          city,
-        };
-
-        if (role === 'creator') {
-          payload.full_name = fullName;
-          payload.instagram_handle = instagramHandle;
-          payload.niche = niche;
-          payload.followers_count = parseInt(followersCount) || 0;
-          payload.bio = bio;
-        } else {
-          payload.company_name = companyName;
-          payload.industry = industry;
-          payload.contact_name = contactName;
-        }
-
-        const data = await api.signup(payload as Parameters<typeof api.signup>[0]);
+        const payload =
+          role === 'creator'
+            ? { action: 'signup' as const, email, password, full_name: fullName, instagram_handle: instagramHandle, niche, city, followers_count: parseInt(followersCount) || 0, bio, role: 'creator' as const }
+            : { action: 'signup' as const, email, password, full_name: contactName, company_name: companyName, industry, role: 'brand' as const };
+        const data = await api.signup(payload);
         setToken(data.session_token);
-        if (role === 'brand') {
-          router.push('/brand/dashboard');
-        } else {
-          router.push('/dashboard');
-        }
+        router.push(role === 'creator' ? '/onboarding' : '/find-creators');
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Something went wrong';
-      if (msg.includes('409')) {
-        setError('Email already registered. Try logging in.');
-      } else if (msg.includes('401')) {
-        setError('Invalid email or password.');
-      } else {
-        setError(msg);
-      }
+      setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDemo = async () => {
-    setDemoLoading(true);
-    try {
-      const data = await api.demoLogin('priyabeauty');
-      setToken(data.session_token);
-      router.push('/dashboard');
-    } catch {
-      setError('Demo login failed. Please try again.');
-      setDemoLoading(false);
-    }
-  };
-
-  const handleFacebookLogin = () => {
-    window.location.href = getLoginUrl();
-  };
-
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-primary-600 via-primary-700 to-purple-800 px-4 py-12">
-      {/* Logo */}
-      <Link href="/" className="mb-8 flex items-center gap-2">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white">
-          <span className="text-xl font-bold text-primary-600">R</span>
-        </div>
-        <span className="text-2xl font-bold text-white">ReachEzy</span>
-      </Link>
-
-      {/* Card */}
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl">
-        {/* Role Toggle */}
-        <div className="mb-6 flex rounded-lg bg-gray-100 p-1">
-          <button
-            type="button"
-            onClick={() => { setRole('creator'); setError(null); }}
-            className={`flex-1 rounded-md py-2 text-sm font-medium transition-all ${
-              role === 'creator'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Influencer
-          </button>
-          <button
-            type="button"
-            onClick={() => { setRole('brand'); setError(null); }}
-            className={`flex-1 rounded-md py-2 text-sm font-medium transition-all ${
-              role === 'brand'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Brand
-          </button>
-        </div>
-
-        <h2 className="mb-1 text-xl font-bold text-gray-900">
-          {mode === 'login' ? 'Welcome back' : 'Create your account'}
-        </h2>
-        <p className="mb-6 text-sm text-gray-500">
-          {mode === 'login'
-            ? `Sign in as ${role === 'brand' ? 'a brand' : 'an influencer'}`
-            : `Sign up as ${role === 'brand' ? 'a brand' : 'an influencer'}`}
-        </p>
-
-        {error && (
-          <div className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Signup-only fields */}
-          {mode === 'signup' && role === 'creator' && (
-            <>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Full Name</label>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="input-field"
-                  placeholder="Priya Sharma"
-                  required
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Instagram Handle</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">@</span>
-                  <input
-                    type="text"
-                    value={instagramHandle}
-                    onChange={(e) => setInstagramHandle(e.target.value)}
-                    className="input-field pl-8"
-                    placeholder="priyabeauty"
-                    required
-                  />
-                </div>
-              </div>
-            </>
-          )}
-
-          {mode === 'signup' && role === 'brand' && (
-            <>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Company Name</label>
-                <input
-                  type="text"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  className="input-field"
-                  placeholder="Nykaa"
-                  required
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Contact Person</label>
-                <input
-                  type="text"
-                  value={contactName}
-                  onChange={(e) => setContactName(e.target.value)}
-                  className="input-field"
-                  placeholder="Your name"
-                />
-              </div>
-            </>
-          )}
-
-          {/* Email + Password (always shown) */}
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="input-field"
-              placeholder="you@example.com"
-              required
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="input-field"
-              placeholder={mode === 'signup' ? 'At least 6 characters' : 'Enter your password'}
-              minLength={mode === 'signup' ? 6 : undefined}
-              required
-            />
-          </div>
-
-          {/* Signup-only extra fields */}
-          {mode === 'signup' && role === 'creator' && (
-            <>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Niche</label>
-                <select
-                  value={niche}
-                  onChange={(e) => setNiche(e.target.value)}
-                  className="input-field"
-                  required
-                >
-                  <option value="">Select your niche</option>
-                  {NICHES.map((n) => (
-                    <option key={n} value={n}>{n}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">City</label>
-                  <input
-                    type="text"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    className="input-field"
-                    placeholder="Mumbai"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Followers</label>
-                  <input
-                    type="number"
-                    value={followersCount}
-                    onChange={(e) => setFollowersCount(e.target.value)}
-                    className="input-field"
-                    placeholder="30000"
-                    min={0}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Bio</label>
-                <textarea
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  className="input-field resize-none"
-                  rows={2}
-                  placeholder="Tell brands about yourself..."
-                />
-              </div>
-            </>
-          )}
-
-          {mode === 'signup' && role === 'brand' && (
-            <>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Industry</label>
-                <select
-                  value={industry}
-                  onChange={(e) => setIndustry(e.target.value)}
-                  className="input-field"
-                  required
-                >
-                  <option value="">Select industry</option>
-                  {INDUSTRIES.map((ind) => (
-                    <option key={ind} value={ind}>{ind}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">City</label>
-                <input
-                  type="text"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  className="input-field"
-                  placeholder="Mumbai"
-                />
-              </div>
-            </>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-primary w-full"
-          >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                {mode === 'login' ? 'Signing in...' : 'Creating account...'}
-              </span>
-            ) : (
-              mode === 'login' ? 'Sign In' : 'Create Account'
-            )}
-          </button>
-        </form>
-
-        {/* Mode Switch */}
-        <p className="mt-4 text-center text-sm text-gray-500">
-          {mode === 'login' ? (
-            <>
-              Don&apos;t have an account?{' '}
-              <button
-                onClick={() => { setMode('signup'); setError(null); }}
-                className="font-medium text-primary-600 hover:text-primary-700"
-              >
-                Sign Up
-              </button>
-            </>
-          ) : (
-            <>
-              Already have an account?{' '}
-              <button
-                onClick={() => { setMode('login'); setError(null); }}
-                className="font-medium text-primary-600 hover:text-primary-700"
-              >
-                Sign In
-              </button>
-            </>
-          )}
-        </p>
-
-        {/* Divider */}
-        <div className="my-5 flex items-center gap-4">
-          <div className="h-px flex-1 bg-gray-200" />
-          <span className="text-xs text-gray-400">or continue with</span>
-          <div className="h-px flex-1 bg-gray-200" />
-        </div>
-
-        {/* Facebook OAuth (influencer only) */}
-        {role === 'creator' && (
-          <button
-            onClick={handleFacebookLogin}
-            className="mb-3 flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
-          >
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" />
+    <div className="relative flex min-h-screen w-full flex-col bg-background-light font-display">
+      {/* Navigation */}
+      <header className="flex items-center justify-between border-b border-primary/10 px-6 md:px-20 py-4 bg-white/80 backdrop-blur-md sticky top-0 z-50">
+        <div className="flex items-center gap-3 text-primary">
+          <div className="size-8">
+            <svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+              <path clipRule="evenodd" d="M12.0799 24L4 19.2479L9.95537 8.75216L18.04 13.4961L18.0446 4H29.9554L29.96 13.4961L38.0446 8.75216L44 19.2479L35.92 24L44 28.7521L38.0446 39.2479L29.96 34.5039L29.9554 44H18.0446L18.04 34.5039L9.95537 39.2479L4 28.7521L12.0799 24Z" fill="currentColor" fillRule="evenodd" />
             </svg>
-            Sign in with Instagram
-            <span className="ml-1 text-xs text-gray-400">(requires tester access)</span>
+          </div>
+          <h2 className="text-slate-900 text-xl font-bold tracking-tight">ReachEzy</h2>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="hidden md:inline text-sm text-slate-500">
+            {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}
+          </span>
+          <button
+            onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+            className="flex cursor-pointer items-center justify-center rounded-lg h-10 px-5 border border-primary text-primary hover:bg-primary/5 text-sm font-bold transition-colors"
+          >
+            {mode === 'login' ? 'Sign Up' : 'Sign In'}
           </button>
-        )}
+        </div>
+      </header>
 
-        {/* Demo Login */}
-        <button
-          onClick={handleDemo}
-          disabled={demoLoading}
-          className="btn-secondary w-full"
-        >
-          {demoLoading ? (
-            <span className="flex items-center justify-center gap-2">
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400/30 border-t-gray-600" />
-              Loading demo...
-            </span>
-          ) : (
-            'Try Demo (Creator)'
+      <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-10">
+        {/* Main Card */}
+        <div className="w-full max-w-[640px] bg-white rounded-xl shadow-2xl shadow-primary/5 border border-slate-100 overflow-hidden">
+          {/* Header */}
+          <div className="p-8 text-center">
+            <h1 className="text-3xl font-black text-slate-900 mb-2">
+              {mode === 'login' ? 'Welcome Back' : 'Create Account'}
+            </h1>
+            <p className="text-slate-500">
+              {mode === 'login' ? 'Sign in to your account' : 'Join the premier creator-brand marketplace'}
+            </p>
+          </div>
+
+          {/* Role Toggle (signup only) */}
+          {mode === 'signup' && (
+            <div className="px-8 pb-6">
+              <div className="flex h-12 w-full items-center justify-center rounded-xl bg-background-light p-1.5">
+                {(['creator', 'brand'] as Role[]).map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setRole(r)}
+                    className={`flex cursor-pointer h-full grow items-center justify-center rounded-lg px-4 transition-all text-sm font-semibold gap-2 ${
+                      role === r
+                        ? 'bg-white shadow-sm text-primary'
+                        : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[20px]">
+                      {r === 'creator' ? 'person' : 'corporate_fare'}
+                    </span>
+                    {r === 'creator' ? 'Creator' : 'Brand'}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
-        </button>
-      </div>
 
-      {/* Back link */}
-      <Link
-        href="/"
-        className="mt-6 text-sm text-primary-200 hover:text-white"
-      >
-        &larr; Back to home
-      </Link>
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="px-8 pb-10 space-y-5">
+            {error && (
+              <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+
+            {mode === 'login' ? (
+              <>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-slate-700 text-sm font-medium">Email Address</label>
+                  <input value={email} onChange={e => setEmail(e.target.value)} type="email" required placeholder="you@example.com" className="input-field" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-slate-700 text-sm font-medium">Password</label>
+                  <input value={password} onChange={e => setPassword(e.target.value)} type="password" required placeholder="••••••••" className="input-field" />
+                </div>
+              </>
+            ) : role === 'creator' ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-slate-700 text-sm font-medium">Full Name</label>
+                    <input value={fullName} onChange={e => setFullName(e.target.value)} required placeholder="Priya Sharma" className="input-field" />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-slate-700 text-sm font-medium">Social Handle</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm">@</span>
+                      <input value={instagramHandle} onChange={e => setInstagramHandle(e.target.value)} required placeholder="priyabeauty" className="input-field pl-8" />
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-slate-700 text-sm font-medium">Content Niche</label>
+                    <select value={niche} onChange={e => setNiche(e.target.value)} className="input-field">
+                      <option value="">Select niche...</option>
+                      {NICHES.map(n => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-slate-700 text-sm font-medium">City</label>
+                    <input value={city} onChange={e => setCity(e.target.value)} placeholder="Mumbai, India" className="input-field" />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-slate-700 text-sm font-medium">Email Address</label>
+                  <input value={email} onChange={e => setEmail(e.target.value)} type="email" required placeholder="priya@example.com" className="input-field" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-slate-700 text-sm font-medium">Password</label>
+                  <input value={password} onChange={e => setPassword(e.target.value)} type="password" required placeholder="••••••••" className="input-field" />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-slate-700 text-sm font-medium">Company Name</label>
+                    <input value={companyName} onChange={e => setCompanyName(e.target.value)} required placeholder="Acme Corp" className="input-field" />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-slate-700 text-sm font-medium">Industry</label>
+                    <select value={industry} onChange={e => setIndustry(e.target.value)} className="input-field">
+                      <option value="">Select industry...</option>
+                      {INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-slate-700 text-sm font-medium">Email Address</label>
+                  <input value={email} onChange={e => setEmail(e.target.value)} type="email" required placeholder="contact@company.com" className="input-field" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-slate-700 text-sm font-medium">Password</label>
+                  <input value={password} onChange={e => setPassword(e.target.value)} type="password" required placeholder="••••••••" className="input-field" />
+                </div>
+              </>
+            )}
+
+            {/* Actions */}
+            <div className="pt-4 flex flex-col gap-3">
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full h-14 bg-primary text-white font-bold rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {loading ? (
+                  <><div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> Processing...</>
+                ) : mode === 'login' ? (
+                  <><span>Sign In</span><span className="material-symbols-outlined">arrow_forward</span></>
+                ) : (
+                  <><span>{role === 'creator' ? 'Create Creator Account' : 'Create Brand Account'}</span><span className="material-symbols-outlined">arrow_forward</span></>
+                )}
+              </button>
+
+              <div className="flex items-center gap-3 py-2">
+                <div className="h-px flex-1 bg-slate-100" />
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">or</span>
+                <div className="h-px flex-1 bg-slate-100" />
+              </div>
+
+              <button
+                type="button"
+                onClick={openDemoModal}
+                className="group w-full h-14 bg-primary/10 text-primary font-bold rounded-xl hover:bg-primary/20 transition-all border border-primary/20 flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined">play_circle</span>
+                Try Demo Account
+                <span className="text-sm font-normal opacity-70 group-hover:opacity-100 transition-opacity">— pick a creator</span>
+              </button>
+            </div>
+
+            <p className="text-center text-xs text-slate-400 mt-6 leading-relaxed">
+              By continuing, you agree to our{' '}
+              <a className="underline text-primary/80" href="#">Terms of Service</a> and{' '}
+              <a className="underline text-primary/80" href="#">Privacy Policy</a>.
+            </p>
+          </form>
+        </div>
+
+        {/* Trust badges */}
+        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-[960px] w-full px-4">
+          {[
+            { icon: 'verified_user', title: 'Verified Brands', desc: 'Work with 500+ top tier global brands directly.' },
+            { icon: 'payments', title: 'Secure Escrow', desc: 'Get paid instantly once your content is approved.' },
+            { icon: 'trending_up', title: 'Growth Tools', desc: 'Advanced analytics to track your campaign reach.' },
+          ].map(b => (
+            <div key={b.title} className="flex flex-col items-center text-center">
+              <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4">
+                <span className="material-symbols-outlined">{b.icon}</span>
+              </div>
+              <h3 className="font-bold text-slate-900 mb-1">{b.title}</h3>
+              <p className="text-sm text-slate-500">{b.desc}</p>
+            </div>
+          ))}
+        </div>
+      </main>
+
+      <footer className="p-10 text-center border-t border-slate-100">
+        <p className="text-sm text-slate-400">© 2024 ReachEzy. All rights reserved.</p>
+      </footer>
+
+      {/* Demo Creator Modal */}
+      {showDemoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+            <div className="p-8">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-black text-slate-900">Choose a Demo Creator</h2>
+                  <p className="text-slate-500 text-sm mt-1">Explore ReachEzy as a sample creator</p>
+                </div>
+                <button onClick={() => setShowDemoModal(false)} className="rounded-full p-2 hover:bg-slate-100 transition-colors">
+                  <span className="material-symbols-outlined text-slate-400">close</span>
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {demoCreators.length === 0 ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+                  </div>
+                ) : (
+                  demoCreators.map((c) => (
+                    <button
+                      key={c.username}
+                      onClick={() => handleDemoLogin(c.username)}
+                      disabled={!!demoLoading}
+                      className="w-full flex items-center gap-4 p-4 rounded-xl border border-slate-200 hover:border-primary/40 hover:bg-primary/5 transition-all text-left disabled:opacity-50"
+                    >
+                      <div className="h-12 w-12 rounded-full overflow-hidden flex-shrink-0 border border-primary/10 bg-gradient-to-br from-primary/20 to-primary/5">
+                        {c.avatar_url ? (
+                          <img src={c.avatar_url} alt={c.display_name} className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="flex h-full w-full items-center justify-center text-2xl">{c.emoji}</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-slate-900">{c.display_name}</span>
+                          <span className="badge-primary">{c.tier} Creator</span>
+                        </div>
+                        <p className="text-sm text-slate-500 truncate">
+                          @{c.username} · {c.niche} · {c.city}
+                        </p>
+                        <p className="text-xs text-slate-400 mt-0.5">{formatFollowers(c.followers_count)} followers</p>
+                      </div>
+                      {demoLoading === c.username ? (
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary/30 border-t-primary flex-shrink-0" />
+                      ) : (
+                        <span className="material-symbols-outlined text-slate-300 flex-shrink-0">arrow_forward_ios</span>
+                      )}
+                    </button>
+                  ))
+                )}
+              </div>
+
+              <p className="text-center text-xs text-slate-400 mt-6">
+                Demo accounts have pre-loaded content and analysis data.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginPageInner />
+    </Suspense>
   );
 }

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import StyleDNA from '@/components/StyleDNA';
 import TopicCloud from '@/components/TopicCloud';
-import AppNavbar from '@/components/AppNavbar';
+import DashboardShell from '@/components/DashboardShell';
 import {
   BarChart,
   Bar,
@@ -36,10 +36,17 @@ export default function AnalyticsPage() {
   const router = useRouter();
   const [styleProfile, setStyleProfile] = useState<StyleProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [username, setUsername] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [profilePic, setProfilePic] = useState('');
 
   const loadData = useCallback(async () => {
     try {
       const profile = await api.getProfile();
+      setUsername(profile.username);
+      setDisplayName(profile.display_name || profile.username);
+      setProfilePic(profile.profile_picture_url || '');
+
       const mediaKit = await api.getMediaKit(profile.username);
       if (mediaKit?.style_profile) {
         setStyleProfile(mediaKit.style_profile);
@@ -65,32 +72,34 @@ export default function AnalyticsPage() {
 
   if (!styleProfile) {
     return (
-      <div className="flex min-h-screen items-center justify-center px-4">
-        <div className="card max-w-md text-center">
-          <svg
-            className="mx-auto mb-4 h-12 w-12 text-gray-300"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z"
-            />
-          </svg>
-          <h2 className="text-xl font-semibold text-gray-900">
-            No Analytics Yet
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Upload your content to get AI-powered style analytics.
-          </p>
-          <Link href="/upload" className="btn-primary mt-6 inline-block">
-            Upload Content
-          </Link>
+      <DashboardShell username={username} displayName={displayName} profilePictureUrl={profilePic} title="Detailed Analytics">
+        <div className="flex h-full items-center justify-center p-8">
+          <div className="flex flex-col items-center text-center p-12 bg-white rounded-2xl border border-slate-200">
+            <svg
+              className="mx-auto mb-4 h-12 w-12 text-slate-300"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z"
+              />
+            </svg>
+            <h2 className="text-xl font-bold text-slate-900 mb-2">
+              No Analytics Yet
+            </h2>
+            <p className="text-slate-500 max-w-sm mb-6">
+              Upload your content to get AI-powered style analytics.
+            </p>
+            <Link href="/upload" className="btn-primary">
+              Upload Content
+            </Link>
+          </div>
         </div>
-      </div>
+      </DashboardShell>
     );
   }
 
@@ -104,15 +113,12 @@ export default function AnalyticsPage() {
           : 'Evolving style. Consider narrowing your content focus.';
 
   return (
-    <div className="min-h-screen">
-      <AppNavbar />
-
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+    <DashboardShell username={username} displayName={displayName} profilePictureUrl={profilePic} title="Detailed Analytics">
+      <div className="mx-auto max-w-6xl p-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Your Content DNA</h1>
-          <p className="mt-1 text-gray-600">
-            AI-powered analysis of your unique content style and production
-            patterns.
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">Your Content DNA</h1>
+          <p className="text-slate-600">
+            AI-powered analysis of your unique content style and production patterns.
           </p>
         </div>
 
@@ -286,6 +292,6 @@ export default function AnalyticsPage() {
           </div>
         </div>
       </div>
-    </div>
+    </DashboardShell>
   );
 }
