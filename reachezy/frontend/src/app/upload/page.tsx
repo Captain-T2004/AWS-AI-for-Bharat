@@ -3,9 +3,18 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import VideoUploader from '@/components/VideoUploader';
+import dynamic from 'next/dynamic';
 import DashboardShell from '@/components/DashboardShell';
 import Link from 'next/link';
+
+const VideoUploader = dynamic(() => import('@/components/VideoUploader'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-48 items-center justify-center">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
+    </div>
+  ),
+});
 
 export default function UploadPage() {
   const router = useRouter();
@@ -37,17 +46,16 @@ export default function UploadPage() {
   const handleUploadComplete = async () => {
     setIsComplete(true);
     setIsAnalyzing(true);
-    if (creatorId) {
-      try {
-        await api.startAnalysis({ creator_id: creatorId });
-      } catch (err) {
-        console.error('Failed to start analysis:', err);
-      }
-    }
+    
+    // Note: We DO NOT call api.startAnalysis() here anymore!
+    // AWS EventBridge is configured (in pipeline_stack.py) to automatically 
+    // trigger the Step Functions pipeline the moment the video finishes uploading to S3.
+    // Calling it manually here causes duplicate (2x) executions.
+    
     setTimeout(() => {
       setIsAnalyzing(false);
       router.push('/dashboard');
-    }, 3000);
+    }, 4000); // give it a slightly longer fake loader since we're not awaiting an API call
   };
 
   if (loading) {

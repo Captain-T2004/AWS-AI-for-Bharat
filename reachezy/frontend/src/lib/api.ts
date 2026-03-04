@@ -86,7 +86,7 @@ export const api = {
 
   // Profile — switched to local
   getProfile: () => fetchLocal('/creator/profile'),
-  updateProfile: (data: { niche: string; city: string }) =>
+  updateProfile: (data: { niche?: string; city?: string; display_name?: string }) =>
     fetchLocal('/creator/profile', {
       method: 'PUT',
       body: JSON.stringify(data),

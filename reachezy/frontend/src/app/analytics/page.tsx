@@ -182,24 +182,27 @@ export default function AnalyticsPage() {
             </h2>
             <div className="flex flex-col items-center py-4">
               <div className="relative flex h-36 w-36 items-center justify-center">
-                <div className="absolute inset-0 rounded-full border-8 border-gray-100" />
-                <div
-                  className="absolute inset-0 rounded-full border-8 border-t-primary-600 border-r-primary-600"
-                  style={{
-                    borderColor: `${
+                <svg className="absolute inset-0 h-full w-full -rotate-90 transform" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f3f4f6" strokeWidth="8" />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    fill="transparent"
+                    stroke={
                       styleProfile.consistency_score >= 70
                         ? '#16a34a'
                         : styleProfile.consistency_score >= 40
                           ? '#ca8a04'
                           : '#dc2626'
-                    } transparent transparent transparent`,
-                    transform: `rotate(${
-                      (styleProfile.consistency_score / 100) * 360
-                    }deg)`,
-                    borderWidth: '8px',
-                    transition: 'transform 1s ease-out',
-                  }}
-                />
+                    }
+                    strokeWidth="8"
+                    strokeDasharray="251.2"
+                    strokeDashoffset={251.2 - (styleProfile.consistency_score / 100) * 251.2}
+                    strokeLinecap="round"
+                    style={{ transition: 'stroke-dashoffset 1s ease-out' }}
+                  />
+                </svg>
                 <div className="relative text-center">
                   <span className="text-4xl font-bold text-gray-900">
                     {styleProfile.consistency_score}

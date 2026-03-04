@@ -56,15 +56,31 @@ export async function PUT(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { niche, city } = body;
+    const { niche, city, display_name } = body;
 
     if (!user.creator_id) {
       return NextResponse.json({ error: 'No creator linked' }, { status: 404 });
     }
 
+    // Build SET clause dynamically — only update provided fields
+    const sets: string[] = [];
+    const values: unknown[] = [];
+    let param = 1;
+
+    if (display_name !== undefined) { sets.push(`display_name = $${param++}`); values.push(display_name); }
+    if (niche !== undefined)        { sets.push(`niche = $${param++}`);        values.push(niche); }
+    if (city !== undefined)         { sets.push(`city = $${param++}`);         values.push(city); }
+
+    if (sets.length === 0) {
+      return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
+    }
+
+    sets.push(`updated_at = NOW()`);
+    values.push(user.creator_id);
+
     await query(
-      `UPDATE creators SET niche = $1, city = $2, updated_at = NOW() WHERE id = $3`,
-      [niche, city, user.creator_id]
+      `UPDATE creators SET ${sets.join(', ')} WHERE id = $${param}`,
+      values
     );
 
     return NextResponse.json({ success: true });

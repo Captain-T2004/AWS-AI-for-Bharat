@@ -4,27 +4,27 @@ interface TopicCloudProps {
   topics: string[];
 }
 
-const COLORS = [
-  'bg-primary-100 text-primary-700',
-  'bg-purple-100 text-purple-700',
-  'bg-blue-100 text-blue-700',
-  'bg-green-100 text-green-700',
-  'bg-orange-100 text-orange-700',
-  'bg-pink-100 text-pink-700',
-  'bg-teal-100 text-teal-700',
-  'bg-amber-100 text-amber-700',
-  'bg-cyan-100 text-cyan-700',
-  'bg-rose-100 text-rose-700',
-  'bg-indigo-100 text-indigo-700',
-  'bg-emerald-100 text-emerald-700',
+interface TopicStyle { bg: string; text: string }
+
+const PALETTE: TopicStyle[] = [
+  { bg: '#e0e7ff', text: '#4338ca' }, // indigo
+  { bg: '#fae8ff', text: '#a21caf' }, // fuchsia
+  { bg: '#dbeafe', text: '#1d4ed8' }, // blue
+  { bg: '#d1fae5', text: '#047857' }, // emerald
+  { bg: '#ffedd5', text: '#c2410c' }, // orange
+  { bg: '#fce7f3', text: '#be185d' }, // pink
+  { bg: '#ccfbf1', text: '#0f766e' }, // teal
+  { bg: '#fef3c7', text: '#b45309' }, // amber
+  { bg: '#cffafe', text: '#0e7490' }, // cyan
+  { bg: '#ffe4e6', text: '#e11d48' }, // rose
 ];
 
-const SIZE_CLASSES = [
-  'text-base px-4 py-2.5 font-semibold',
-  'text-sm px-3.5 py-2 font-medium',
-  'text-sm px-3 py-2 font-medium',
-  'text-xs px-3 py-1.5 font-medium',
-  'text-xs px-2.5 py-1.5 font-normal',
+const SIZES = [
+  { p: '10px 16px', f: '1rem', w: 600 },
+  { p: '8px 14px', f: '0.875rem', w: 500 },
+  { p: '8px 12px', f: '0.875rem', w: 500 },
+  { p: '6px 12px', f: '0.75rem', w: 500 },
+  { p: '6px 10px', f: '0.75rem', w: 400 },
 ];
 
 export default function TopicCloud({ topics }: TopicCloudProps) {
@@ -39,16 +39,27 @@ export default function TopicCloud({ topics }: TopicCloudProps) {
   return (
     <div className="flex flex-wrap gap-2">
       {topics.map((topic, idx) => {
-        const sizeIndex = Math.min(idx, SIZE_CLASSES.length - 1);
-        const colorIndex = idx % COLORS.length;
+        const size = SIZES[Math.min(idx, SIZES.length - 1)];
+        const color = PALETTE[idx % PALETTE.length];
 
         return (
-          <span
+          <div
             key={topic}
-            className={`inline-flex items-center justify-center leading-none rounded-full transition-transform hover:scale-105 ${COLORS[colorIndex]} ${SIZE_CLASSES[sizeIndex]}`}
+            className="rounded-full transition-transform hover:scale-105"
+            style={{ 
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: color.bg, 
+              color: color.text,
+              border: `1.5px solid ${color.text}30`,
+              padding: size.p,
+              fontSize: size.f,
+              fontWeight: size.w,
+            }}
           >
             {topic}
-          </span>
+          </div>
         );
       })}
     </div>

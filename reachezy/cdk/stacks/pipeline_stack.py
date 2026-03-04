@@ -251,7 +251,21 @@ class PipelineStack(cdk.Stack):
             tracing=_lambda.Tracing.ACTIVE,
             environment={**base_env},
         )
-        db_secret.grant_read(profile_aggregator_fn)
+        # ----- 5. Error Handler -----
+        error_handler_fn = _lambda.Function(
+            self,
+            "ErrorHandlerFn",
+            function_name="reachezy-pipeline-error-handler",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="handler.handler",
+            code=_lambda.Code.from_asset(os.path.join(lambdas_dir, "error_handler")),
+            layers=[shared_layer],
+            memory_size=128,
+            timeout=cdk.Duration.seconds(30),
+            tracing=_lambda.Tracing.ACTIVE,
+            environment={**base_env},
+        )
+        db_secret.grant_read(error_handler_fn)
 
         # =====================================================================
         # Step Functions State Machine
@@ -265,6 +279,20 @@ class PipelineStack(cdk.Stack):
             "backoff_rate": 2.0,
         }
 
+        # Error Catching task
+        error_catch_task = sfn_tasks.LambdaInvoke(
+            self,
+            "HandleError",
+            lambda_function=error_handler_fn,
+            payload_response_only=True,
+        )
+
+        catch_props = {
+            "errors": ["States.ALL"],
+            "handler": error_catch_task,
+            "result_path": "$.errorInfo"
+        }
+
         # Step 1 — Extract frames from uploaded video
         extract_task = sfn_tasks.LambdaInvoke(
             self,
@@ -274,6 +302,7 @@ class PipelineStack(cdk.Stack):
             payload_response_only=True,
         )
         extract_task.add_retry(**retry_config)
+        extract_task.add_catch(**catch_props)
 
         # Step 2 — Analyze video frames with AI (Bedrock or Groq)
         analyze_task = sfn_tasks.LambdaInvoke(
@@ -290,6 +319,7 @@ class PipelineStack(cdk.Stack):
             payload_response_only=True,
         )
         analyze_task.add_retry(**retry_config)
+        analyze_task.add_catch(**catch_props)
 
         # Step 3 — Generate embeddings
         embed_task = sfn_tasks.LambdaInvoke(
@@ -305,6 +335,7 @@ class PipelineStack(cdk.Stack):
             payload_response_only=True,
         )
         embed_task.add_retry(**retry_config)
+        embed_task.add_catch(**catch_props)
 
         # Step 4 — Aggregate results into creator profile
         aggregate_task = sfn_tasks.LambdaInvoke(
@@ -319,6 +350,7 @@ class PipelineStack(cdk.Stack):
             payload_response_only=True,
         )
         aggregate_task.add_retry(**retry_config)
+        aggregate_task.add_catch(**catch_props)
 
         # Chain: extract -> analyze -> embed -> aggregate
         chain = extract_task.next(analyze_task).next(embed_task).next(aggregate_task)

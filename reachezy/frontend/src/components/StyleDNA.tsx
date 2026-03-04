@@ -65,7 +65,7 @@ export default function StyleDNA({ styleProfile }: StyleDNAProps) {
         <div className="h-3 w-full overflow-hidden rounded-full bg-gray-100">
           <div
             className={`h-full rounded-full bg-gradient-to-r ${getEnergyColor(styleProfile.dominant_energy)} transition-all duration-700`}
-            style={{ width: `${styleProfile.energy_score}%` }}
+            style={{ width: `${styleProfile.energy_score || 50}%` }}
           />
         </div>
         <div className="mt-1 flex justify-between text-xs text-gray-400">

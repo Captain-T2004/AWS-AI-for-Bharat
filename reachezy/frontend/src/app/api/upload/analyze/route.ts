@@ -38,12 +38,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing creator_id' }, { status: 400 });
     }
 
-    // Fetch uploaded/processing videos that haven't been analyzed yet
+    // Fetch uploaded videos (exlucing 'processing' to avoid duplicate executions)
     const { rows: videos } = await query(
       `SELECT vu.id, vu.s3_key FROM video_uploads vu
        LEFT JOIN video_analyses va ON va.video_id = vu.id
        WHERE vu.creator_id = $1
-         AND vu.status IN ('uploaded', 'processing')
+         AND vu.status = 'uploaded'
          AND va.video_id IS NULL`,
       [creator_id]
     );

@@ -19,9 +19,9 @@ interface DashboardShellProps {
 const NAV = [
   { href: '/dashboard',           icon: 'dashboard',   label: 'Dashboard' },
   { href: '/dashboard/media-kit', icon: 'description', label: 'Media Kit' },
+  { href: '/analytics',           icon: 'insights',    label: 'Detailed Analysis' },
   { href: '/upload',              icon: 'upload',       label: 'Upload Videos' },
   { href: '/dashboard/settings',  icon: 'payments',    label: 'Rate Settings' },
-  { href: '/influencer-search',   icon: 'explore',     label: 'Discover' },
 ];
 
 export default function DashboardShell({
@@ -99,11 +99,13 @@ export default function DashboardShell({
           <div className="flex items-center gap-4">
             {headerRight}
             {profilePictureUrl ? (
-              <img src={profilePictureUrl} alt={displayName} className="size-8 rounded-full object-cover" />
+              <Link href="/dashboard/profile" title="My Account">
+                <img src={profilePictureUrl} alt={displayName} className="size-8 rounded-full object-cover ring-2 ring-transparent hover:ring-primary/40 transition-all cursor-pointer" />
+              </Link>
             ) : (
-              <div className="size-8 rounded-full bg-gradient-to-br from-primary/70 to-primary flex items-center justify-center text-white text-xs font-bold">
+              <Link href="/dashboard/profile" title="My Account" className="size-8 rounded-full bg-gradient-to-br from-primary/70 to-primary flex items-center justify-center text-white text-xs font-bold ring-2 ring-transparent hover:ring-primary/40 transition-all">
                 {initials}
-              </div>
+              </Link>
             )}
           </div>
         </header>
