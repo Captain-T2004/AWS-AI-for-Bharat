@@ -6,14 +6,10 @@ import { clearToken, getUserRole } from '@/lib/auth';
 
 interface AppNavbarProps {
   savedCount?: number;
-  onShowSaved?: () => void;
-  showingSaved?: boolean;
 }
 
 export default function AppNavbar({
   savedCount,
-  onShowSaved,
-  showingSaved,
 }: AppNavbarProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -54,19 +50,22 @@ export default function AppNavbar({
           <Link href="/brand-search" className={linkClass('/brand-search')}>
             Find Brands
           </Link>
+          <Link href="/messages" className={linkClass('/messages')}>
+            Messages
+          </Link>
 
-          {isBrand && onShowSaved ? (
-            <button
-              onClick={onShowSaved}
+          {isBrand && (
+            <Link
+              href="/brand/wishlist"
               className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
-                showingSaved
+                pathname === '/brand/wishlist'
                   ? 'text-primary-600'
                   : 'text-gray-600 hover:text-primary-600'
               }`}
             >
               <svg
                 className="h-4 w-4"
-                fill={showingSaved ? 'currentColor' : 'none'}
+                fill={pathname === '/brand/wishlist' ? 'currentColor' : 'none'}
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
@@ -78,8 +77,8 @@ export default function AppNavbar({
                 />
               </svg>
               Saved{savedCount ? ` (${savedCount})` : ''}
-            </button>
-          ) : null}
+            </Link>
+          )}
 
           {!isBrand && (
             <Link href="/upload" className={linkClass('/upload')}>

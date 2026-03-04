@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { api } from '@/lib/api';
-import { clearToken, getUserSession } from '@/lib/auth';
+import { getUserSession } from '@/lib/auth';
 import CreatorCard from '@/components/CreatorCard';
 import AppNavbar from '@/components/AppNavbar';
 
@@ -63,9 +62,6 @@ export default function BrandDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [savingId, setSavingId] = useState<string | null>(null);
-  const [showSaved, setShowSaved] = useState(false);
-  const [savedCreators, setSavedCreators] = useState<Creator[]>([]);
-  const [loadingSaved, setLoadingSaved] = useState(false);
 
   // Auth check
   useEffect(() => {
@@ -108,8 +104,6 @@ export default function BrandDashboardPage() {
     setSearching(true);
     setError(null);
     setSearchDone(false);
-    setShowSaved(false);
-
     try {
       const data = await api.searchCreators(q);
       setResults(data.results || []);
@@ -144,28 +138,6 @@ export default function BrandDashboardPage() {
     }
   };
 
-  const handleShowSaved = async () => {
-    if (showSaved) {
-      setShowSaved(false);
-      return;
-    }
-    setLoadingSaved(true);
-    try {
-      const data = await api.getWishlist();
-      setSavedCreators(data.wishlist || []);
-      setShowSaved(true);
-    } catch (err) {
-      console.error('Load wishlist error:', err);
-    } finally {
-      setLoadingSaved(false);
-    }
-  };
-
-  const handleLogout = () => {
-    clearToken();
-    router.replace('/');
-  };
-
   const parsedBadges = parsed
     ? Object.entries(parsed).filter(
         ([key, val]) =>
@@ -175,11 +147,7 @@ export default function BrandDashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AppNavbar
-        savedCount={savedIds.size}
-        onShowSaved={handleShowSaved}
-        showingSaved={showSaved}
-      />
+      <AppNavbar savedCount={savedIds.size} />
 
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         {/* Search Section */}
@@ -255,46 +223,8 @@ export default function BrandDashboardPage() {
           </div>
         )}
 
-        {/* Saved View */}
-        {showSaved && (
-          <>
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Saved Creators ({savedCreators.length})
-              </h2>
-              <button
-                onClick={() => setShowSaved(false)}
-                className="text-sm text-gray-500 hover:text-gray-700"
-              >
-                Back to search
-              </button>
-            </div>
-            {savedCreators.length === 0 ? (
-              <div className="py-16 text-center">
-                <svg className="mx-auto h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
-                </svg>
-                <p className="mt-4 text-gray-500">No saved creators yet</p>
-                <p className="text-sm text-gray-400">Search for creators and click the heart to save them</p>
-              </div>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {savedCreators.map((creator) => (
-                  <CreatorCard
-                    key={creator.creator_id}
-                    creator={creator}
-                    isSaved={true}
-                    onToggleSave={handleToggleSave}
-                    savingId={savingId}
-                  />
-                ))}
-              </div>
-            )}
-          </>
-        )}
-
         {/* Search Results / All Creators */}
-        {!showSaved && searchDone && (
+        {searchDone && (
           <>
             <div className="mb-4 flex items-center justify-between">
               <p className="text-sm text-gray-500">
@@ -342,7 +272,7 @@ export default function BrandDashboardPage() {
         )}
 
         {/* Loading state — initial load */}
-        {!showSaved && !searchDone && !searching && (
+        {!searchDone && !searching && (
           <div className="py-16 text-center">
             <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600" />
             <p className="text-gray-600">Loading creators...</p>

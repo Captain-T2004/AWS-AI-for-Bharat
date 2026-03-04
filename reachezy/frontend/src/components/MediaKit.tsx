@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import { formatINR, getFollowerBucket } from '@/lib/constants';
 import BenchmarkDisplay from './BenchmarkDisplay';
 import StyleDNA from './StyleDNA';
@@ -69,6 +71,8 @@ export default function MediaKit({
 }: MediaKitProps) {
   const followerBucket = getFollowerBucket(creator.followers_count);
   const [copied, setCopied] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const kitRef = useRef<HTMLDivElement>(null);
 
   const handleCopyLink = () => {
     const url = typeof window !== 'undefined' ? window.location.href : '';
@@ -80,8 +84,67 @@ export default function MediaKit({
     }
   };
 
-  const handleDownloadPDF = () => {
-    window.print();
+  const handleDownloadPDF = async () => {
+    if (!kitRef.current) { window.print(); return; }
+    setDownloading(true);
+    try {
+      const canvas = await html2canvas(kitRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#f8fafc',
+        onclone: (_doc, clonedEl) => {
+          clonedEl.querySelectorAll<HTMLElement>('.pdf-hide').forEach(el => {
+            el.style.display = 'none';
+          });
+        },
+      });
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const margin = 8;
+      const usableW = pageW - margin * 2;
+      const usableH = pageH - margin * 2;
+      const imgH = (canvas.height * usableW) / canvas.width;
+
+      if (imgH <= usableH) {
+        // Fits on one page as-is
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', margin, margin, usableW, imgH);
+      } else if (imgH <= usableH * 1.5) {
+        // Slightly too tall — scale down to fit one page
+        const scale = usableH / imgH;
+        const finalW = usableW * scale;
+        const finalH = usableH;
+        const xOffset = margin + (usableW - finalW) / 2;
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', xOffset, margin, finalW, finalH);
+      } else {
+        // Multi-page: crop canvas into clean per-page slices
+        const pxPerMm = canvas.width / usableW;
+        const sliceHeightPx = Math.floor(usableH * pxPerMm);
+        let yOffset = 0;
+        let pageNum = 0;
+        while (yOffset < canvas.height) {
+          if (pageNum > 0) pdf.addPage();
+          const thisSlicePx = Math.min(sliceHeightPx, canvas.height - yOffset);
+          const sliceCanvas = document.createElement('canvas');
+          sliceCanvas.width = canvas.width;
+          sliceCanvas.height = thisSlicePx;
+          const ctx = sliceCanvas.getContext('2d')!;
+          ctx.drawImage(canvas, 0, yOffset, canvas.width, thisSlicePx, 0, 0, canvas.width, thisSlicePx);
+          const sliceH = (thisSlicePx * usableW) / canvas.width;
+          pdf.addImage(sliceCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', margin, margin, usableW, sliceH);
+          yOffset += sliceHeightPx;
+          pageNum++;
+        }
+      }
+
+      pdf.save(`${creator.username}-media-kit.pdf`);
+    } catch (err) {
+      console.error('PDF generation failed, falling back to print:', err);
+      window.print();
+    } finally {
+      setDownloading(false);
+    }
   };
 
   const formatFollowers = (count: number) => {
@@ -91,7 +154,7 @@ export default function MediaKit({
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 space-y-8">
+    <div ref={kitRef} className="mx-auto max-w-4xl px-4 py-12 sm:px-6 space-y-8">
       {/* ── Profile Header Card ── */}
       <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/50 p-8 sm:p-12 text-center relative overflow-hidden">
         {/* Decorative background */}
@@ -132,151 +195,139 @@ export default function MediaKit({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* ── Left Column: Stats & Style ── */}
-        <div className="md:col-span-1 flex flex-col gap-8">
-          
-          {/* Stats */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 text-center">
-              <p className="text-3xl font-black text-slate-900">{formatFollowers(creator.followers_count)}</p>
-              <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400">Followers</p>
+      {/* ── Stats + Actions Row ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 text-center">
+          <p className="text-3xl font-black text-slate-900">{formatFollowers(creator.followers_count)}</p>
+          <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400">Followers</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 text-center">
+          <p className="text-3xl font-black text-slate-900">{creator.media_count}</p>
+          <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400">Posts</p>
+        </div>
+        <button onClick={handleCopyLink} className="pdf-hide btn-secondary justify-center group flex items-center h-full rounded-2xl border border-slate-100 shadow-sm">
+          {copied ? (
+            <><span className="material-symbols-outlined mr-2 text-emerald-500">check_circle</span> <span className="text-emerald-600 font-bold">Link Copied!</span></>
+          ) : (
+            <><span className="material-symbols-outlined mr-2 group-hover:scale-110 transition-transform">ios_share</span> Share Kit</>
+          )}
+        </button>
+        <button onClick={handleDownloadPDF} disabled={downloading} className="pdf-hide btn-primary justify-center shadow-primary-sm group flex items-center h-full rounded-2xl disabled:opacity-60">
+          {downloading ? (
+            <><span className="material-symbols-outlined mr-2 animate-spin">progress_activity</span> Generating...</>
+          ) : (
+            <><span className="material-symbols-outlined mr-2 group-hover:-translate-y-0.5 transition-transform">picture_as_pdf</span> Download PDF</>
+          )}
+        </button>
+        <style jsx global>{`
+          @media print {
+            body * { visibility: hidden; }
+            .mx-auto.max-w-4xl, .mx-auto.max-w-4xl * { visibility: visible; }
+            .mx-auto.max-w-4xl { position: absolute; left: 0; top: 0; width: 100%; max-width: 100%; padding: 20px; }
+            nav, header, footer, button, .btn-primary, .btn-secondary { display: none !important; }
+            @page { size: A4; margin: 15mm; }
+          }
+        `}</style>
+      </div>
+
+      {/* ── Rate Card (full width) ── */}
+      {rates && (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 sm:p-8">
+          <div className="flex items-center justify-between mb-8 border-b border-slate-100 pb-4">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-xl" aria-hidden="true">monetization_on</span>
+              <h2 className="text-xl font-bold text-slate-900">Rate Card</h2>
             </div>
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 text-center">
-              <p className="text-3xl font-black text-slate-900">{creator.media_count}</p>
-              <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400">Posts</p>
+            <div className="text-right">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Benchmark Tier</p>
+              <p className="text-sm font-semibold text-primary">{followerBucket}</p>
             </div>
           </div>
 
-          {/* Style DNA */}
-          {styleProfile && (
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-              <div className="flex items-center gap-2 mb-6 border-b border-slate-100 pb-4">
-                <span className="material-symbols-outlined text-primary text-xl" aria-hidden="true">psychology</span>
-                <h2 className="text-lg font-bold text-slate-900">Content Style</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+            {[
+              { label: 'Reel / Short', value: rates.reel_rate },
+              { label: 'Story (24h)', value: rates.story_rate },
+              { label: 'Static Post', value: rates.post_rate }
+            ].map(r => (
+              <div key={r.label} className="rounded-[1.5rem] bg-background-light p-6 text-center border border-slate-100 transition-transform hover:-translate-y-1">
+                <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2">{r.label}</p>
+                <p className="text-3xl font-black text-slate-900">{formatINR(r.value)}</p>
               </div>
-              <StyleDNA styleProfile={styleProfile} />
+            ))}
+          </div>
 
-              {styleProfile.topics && styleProfile.topics.length > 0 && (
-                <div className="mt-6 border-t border-slate-100 pt-6">
-                  <h3 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Dominant Topics</h3>
-                  <TopicCloud topics={styleProfile.topics} />
-                </div>
-              )}
+          {rates.accepts_barter && (
+            <div className="mb-8 flex items-center justify-center gap-2 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3">
+              <span className="material-symbols-outlined text-emerald-600 text-lg">handshake</span>
+              <span className="text-sm font-bold text-emerald-800">Open to barter & product exchange collaborations</span>
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 flex flex-col gap-3">
-            <button onClick={handleCopyLink} className="btn-secondary w-full justify-center group flex items-center h-12">
-              {copied ? (
-                <><span className="material-symbols-outlined mr-2 text-emerald-500">check_circle</span> <span className="text-emerald-600 font-bold">Link Copied!</span></>
-              ) : (
-                <><span className="material-symbols-outlined mr-2 group-hover:scale-110 transition-transform">ios_share</span> Share Kit</>
-              )}
-            </button>
-            <button onClick={handleDownloadPDF} className="btn-primary w-full justify-center shadow-primary-sm group flex items-center h-12">
-              <span className="material-symbols-outlined mr-2 group-hover:-translate-y-0.5 transition-transform">picture_as_pdf</span>
-              Download PDF
-            </button>
-            <style jsx global>{`
-              @media print {
-                body * { visibility: hidden; }
-                .mx-auto.max-w-4xl, .mx-auto.max-w-4xl * { visibility: visible; }
-                .mx-auto.max-w-4xl { position: absolute; left: 0; top: 0; width: 100%; max-width: 100%; padding: 20px; }
-                nav, header, footer, button, .btn-primary, .btn-secondary { display: none !important; }
-                @page { size: A4; margin: 15mm; }
-              }
-            `}</style>
-          </div>
-        </div>
-
-        {/* ── Right Column: Rates & Content ── */}
-        <div className="md:col-span-2 flex flex-col gap-8">
-          
-          {/* Rate Card */}
-          {rates && (
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 sm:p-8">
-              <div className="flex items-center justify-between mb-8 border-b border-slate-100 pb-4">
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary text-xl" aria-hidden="true">monetization_on</span>
-                  <h2 className="text-xl font-bold text-slate-900">Rate Card</h2>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Benchmark Tier</p>
-                  <p className="text-sm font-semibold text-primary">{followerBucket}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                {[
-                  { label: 'Reel / Short', value: rates.reel_rate },
-                  { label: 'Story (24h)', value: rates.story_rate },
-                  { label: 'Static Post', value: rates.post_rate }
-                ].map(r => (
-                  <div key={r.label} className="rounded-[1.5rem] bg-background-light p-6 text-center border border-slate-100 transition-transform hover:-translate-y-1">
-                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2">{r.label}</p>
-                    <p className="text-3xl font-black text-slate-900">{formatINR(r.value)}</p>
-                  </div>
-                ))}
-              </div>
-
-              {rates.accepts_barter && (
-                <div className="mb-8 flex items-center justify-center gap-2 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3">
-                  <span className="material-symbols-outlined text-emerald-600 text-lg">handshake</span>
-                  <span className="text-sm font-bold text-emerald-800">Open to barter & product exchange collaborations</span>
-                </div>
-              )}
-
-              {benchmarks && (
-                <div className="mt-8">
-                  <BenchmarkDisplay
-                    benchmarks={benchmarks}
-                    niche={creator.niche}
-                    followerBucket={followerBucket}
-                    rates={{ reel: rates.reel_rate, story: rates.story_rate, post: rates.post_rate }}
-                  />
-                </div>
-              )}
+          {benchmarks && (
+            <div className="mt-8">
+              <BenchmarkDisplay
+                benchmarks={benchmarks}
+                niche={creator.niche}
+                followerBucket={followerBucket}
+                rates={{ reel: rates.reel_rate, story: rates.story_rate, post: rates.post_rate }}
+              />
             </div>
           )}
-
-          {/* Top Content Portfolio */}
-          <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 sm:p-8">
-            <div className="flex items-center gap-2 mb-6 border-b border-slate-100 pb-4">
-              <span className="material-symbols-outlined text-primary text-xl" aria-hidden="true">play_circle</span>
-              <h2 className="text-xl font-bold text-slate-900">Top Content</h2>
-            </div>
-            
-            {thumbnailUrls.length > 0 || videos.length > 0 ? (
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                {(thumbnailUrls.length > 0 ? thumbnailUrls.slice(0, 6) : videos.slice(0, 6)).map((item, idx) => (
-                  <div key={idx} className="aspect-[9/16] overflow-hidden rounded-[1.5rem] bg-slate-100 ring-1 ring-slate-200 shadow-sm group relative">
-                    {typeof item === 'string' ? (
-                      <img src={item} alt={`Content ${idx + 1}`} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                    ) : (
-                      <div className="flex h-full items-center justify-center">
-                        <span className="material-symbols-outlined text-4xl text-slate-300">movie</span>
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                      <span className="material-symbols-outlined text-white">play_arrow</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex aspect-[9/16] items-center justify-center rounded-[1.5rem] bg-slate-50 border border-slate-100 border-dashed">
-                    <span className="material-symbols-outlined text-3xl text-slate-200">video_camera_back</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
         </div>
+      )}
+
+      {/* ── Content Style (full width) ── */}
+      {styleProfile && (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 sm:p-8">
+          <div className="flex items-center gap-2 mb-6 border-b border-slate-100 pb-4">
+            <span className="material-symbols-outlined text-primary text-xl" aria-hidden="true">psychology</span>
+            <h2 className="text-xl font-bold text-slate-900">Content Style</h2>
+          </div>
+          <StyleDNA styleProfile={styleProfile} />
+
+          {styleProfile.topics && styleProfile.topics.length > 0 && (
+            <div className="mt-6 border-t border-slate-100 pt-6">
+              <h3 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Dominant Topics</h3>
+              <TopicCloud topics={styleProfile.topics} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Top Content Portfolio (full width) ── */}
+      <div className="pdf-hide bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 sm:p-8">
+        <div className="flex items-center gap-2 mb-6 border-b border-slate-100 pb-4">
+          <span className="material-symbols-outlined text-primary text-xl" aria-hidden="true">play_circle</span>
+          <h2 className="text-xl font-bold text-slate-900">Top Content</h2>
+        </div>
+
+        {thumbnailUrls.length > 0 || videos.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {(thumbnailUrls.length > 0 ? thumbnailUrls.slice(0, 6) : videos.slice(0, 6)).map((item, idx) => (
+              <div key={idx} className="aspect-[9/16] overflow-hidden rounded-[1.5rem] bg-slate-100 ring-1 ring-slate-200 shadow-sm group relative">
+                {typeof item === 'string' ? (
+                  <img src={item} alt={`Content ${idx + 1}`} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                ) : (
+                  <div className="flex h-full items-center justify-center">
+                    <span className="material-symbols-outlined text-4xl text-slate-300">movie</span>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                  <span className="material-symbols-outlined text-white">play_arrow</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex aspect-[9/16] items-center justify-center rounded-[1.5rem] bg-slate-50 border border-slate-100 border-dashed">
+                <span className="material-symbols-outlined text-3xl text-slate-200">video_camera_back</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

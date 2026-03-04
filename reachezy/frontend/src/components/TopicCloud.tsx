@@ -20,11 +20,11 @@ const COLORS = [
 ];
 
 const SIZE_CLASSES = [
-  'text-base px-4 py-2 font-semibold',
-  'text-sm px-3.5 py-1.5 font-medium',
-  'text-sm px-3 py-1.5 font-medium',
-  'text-xs px-3 py-1 font-medium',
-  'text-xs px-2.5 py-1 font-normal',
+  'text-base px-4 py-2.5 font-semibold',
+  'text-sm px-3.5 py-2 font-medium',
+  'text-sm px-3 py-2 font-medium',
+  'text-xs px-3 py-1.5 font-medium',
+  'text-xs px-2.5 py-1.5 font-normal',
 ];
 
 export default function TopicCloud({ topics }: TopicCloudProps) {
@@ -45,7 +45,7 @@ export default function TopicCloud({ topics }: TopicCloudProps) {
         return (
           <span
             key={topic}
-            className={`inline-flex items-center rounded-full transition-transform hover:scale-105 ${COLORS[colorIndex]} ${SIZE_CLASSES[sizeIndex]}`}
+            className={`inline-flex items-center justify-center leading-none rounded-full transition-transform hover:scale-105 ${COLORS[colorIndex]} ${SIZE_CLASSES[sizeIndex]}`}
           >
             {topic}
           </span>
