@@ -44,12 +44,11 @@ export default function AppNavbar({
           >
             Dashboard
           </Link>
-          <Link href="/influencer-search" className={linkClass('/influencer-search')}>
-            Find Creators
-          </Link>
-          <Link href="/brand-search" className={linkClass('/brand-search')}>
-            Find Brands
-          </Link>
+          {isBrand && (
+            <Link href="/influencer-search" className={linkClass('/influencer-search')}>
+              Find Creators
+            </Link>
+          )}
           <Link href="/messages" className={linkClass('/messages')}>
             Messages
           </Link>
