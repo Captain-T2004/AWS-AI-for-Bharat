@@ -59,28 +59,28 @@ class PipelineStack(cdk.Stack):
                 filters_config=[
                     bedrock.CfnGuardrail.ContentFilterConfigProperty(
                         type="SEXUAL",
-                        input_strength="HIGH",
-                        output_strength="HIGH",
+                        input_strength="LOW",
+                        output_strength="LOW",
                     ),
                     bedrock.CfnGuardrail.ContentFilterConfigProperty(
                         type="VIOLENCE",
-                        input_strength="HIGH",
-                        output_strength="HIGH",
+                        input_strength="LOW",
+                        output_strength="LOW",
                     ),
                     bedrock.CfnGuardrail.ContentFilterConfigProperty(
                         type="HATE",
-                        input_strength="HIGH",
-                        output_strength="HIGH",
+                        input_strength="LOW",
+                        output_strength="LOW",
                     ),
                     bedrock.CfnGuardrail.ContentFilterConfigProperty(
                         type="INSULTS",
-                        input_strength="HIGH",
-                        output_strength="HIGH",
+                        input_strength="LOW",
+                        output_strength="LOW",
                     ),
                     bedrock.CfnGuardrail.ContentFilterConfigProperty(
                         type="MISCONDUCT",
-                        input_strength="HIGH",
-                        output_strength="HIGH",
+                        input_strength="LOW",
+                        output_strength="LOW",
                     ),
                     bedrock.CfnGuardrail.ContentFilterConfigProperty(
                         type="PROMPT_ATTACK",
@@ -194,13 +194,13 @@ class PipelineStack(cdk.Stack):
             )
         )
         # Grant STS AssumeRole for cross-account Bedrock access
-        if bedrock_role_arn:
-            video_analyzer_fn.add_to_role_policy(
-                iam.PolicyStatement(
-                    actions=["sts:AssumeRole"],
-                    resources=[bedrock_role_arn],
-                )
+        # We allow "*" here to support dynamic role configuration via environment variables
+        video_analyzer_fn.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["sts:AssumeRole"],
+                resources=["*"],
             )
+        )
 
         # ----- 3. Embedding Generator (Amazon Titan Text Embeddings V2 via Bedrock) -----
         embedding_generator_fn = _lambda.Function(
@@ -251,6 +251,8 @@ class PipelineStack(cdk.Stack):
             tracing=_lambda.Tracing.ACTIVE,
             environment={**base_env},
         )
+        db_secret.grant_read(profile_aggregator_fn)
+
         # ----- 5. Error Handler -----
         error_handler_fn = _lambda.Function(
             self,

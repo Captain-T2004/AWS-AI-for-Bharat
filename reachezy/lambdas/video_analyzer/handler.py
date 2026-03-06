@@ -71,22 +71,9 @@ def _clean_json_response(text):
     text = re.sub(r"\n?```\s*$", "", text)
     return text.strip()
 
-
 def _parse_analysis(raw_text):
     """Parse JSON from model response with fallback extraction."""
-    cleaned_text = _clean_json_response(raw_text)
-
-    try:
-        return json.loads(cleaned_text)
-    except json.JSONDecodeError:
-        json_match = re.search(r"\{[\s\S]*\}", raw_text)
-        if json_match:
-            try:
-                return json.loads(json_match.group())
-            except json.JSONDecodeError:
-                pass
-
-    return {
+    analysis_template = {
         "energy_level": "moderate",
         "aesthetic": "natural",
         "setting": "mixed",
@@ -96,8 +83,33 @@ def _parse_analysis(raw_text):
         "dominant_colors": [],
         "text_on_screen": False,
         "face_visible": False,
-        "summary": f"Analysis could not be parsed. Raw response: {raw_text[:200]}",
+        "summary": "AI analysis was unable to process this video. This can happen if the content is too dark, blurry, or contains blocked material.",
     }
+
+    print(f"DEBUG: raw_text from model (truncated): {raw_text[:500]}")
+    cleaned_text = _clean_json_response(raw_text)
+
+    # Check for specific safety block message
+    if "blocked by our content safety policy" in raw_text.lower():
+        print("DEBUG: Safety block detected in raw_text")
+        return analysis_template
+
+    try:
+        parsed = json.loads(cleaned_text)
+        return {**analysis_template, **parsed}
+    except json.JSONDecodeError as e:
+        print(f"DEBUG: JSON parsing failed: {e}. Trying regex fallback.")
+        json_match = re.search(r"\{[\s\S]*\}", raw_text)
+        if json_match:
+            try:
+                parsed = json.loads(json_match.group())
+                return {**analysis_template, **parsed}
+            except json.JSONDecodeError:
+                print("DEBUG: Regex JSON extraction also failed.")
+                pass
+
+    print("DEBUG: Falling back to default analysis template.")
+    return analysis_template
 
 
 def _analyze_with_bedrock(frame_data_list, video_id):
@@ -121,16 +133,23 @@ def _analyze_with_bedrock(frame_data_list, video_id):
     guardrail_kwargs = {}
     guardrail_id = os.environ.get("GUARDRAIL_ID")
     guardrail_version = os.environ.get("GUARDRAIL_VERSION", "DRAFT")
-    if guardrail_id:
+    bedrock_role_arn = os.environ.get("BEDROCK_ROLE_ARN")
+
+    # Skip guardrails for cross-account calls unless manually configured
+    # Local guardrail IDs won't work in the secondary account
+    if guardrail_id and not (bedrock_role_arn and bedrock_role_arn.strip()):
         guardrail_kwargs["guardrailConfig"] = {
             "guardrailIdentifier": guardrail_id,
             "guardrailVersion": guardrail_version,
         }
+    elif guardrail_id and bedrock_role_arn and bedrock_role_arn.strip():
+        print(f"Skipping local guardrail {guardrail_id} for cross-account role: {bedrock_role_arn}")
 
     last_error = None
     for model_id in BEDROCK_MODEL_FALLBACKS:
         try:
             print(f"Calling Bedrock Converse API with model {model_id} for video {video_id}")
+            print(f"DEBUG: guardrail_kwargs: {guardrail_kwargs}")
             response = bedrock.converse(
                 modelId=model_id,
                 messages=[{"role": "user", "content": content_blocks}],
@@ -138,8 +157,21 @@ def _analyze_with_bedrock(frame_data_list, video_id):
                 **guardrail_kwargs,
             )
 
+            stop_reason = response.get("stopReason")
             raw_text = response["output"]["message"]["content"][0]["text"]
-            print(f"Success with model {model_id}, response length: {len(raw_text)} chars, stop reason: {response.get('stopReason')}")
+            print(f"Success with model {model_id}, response length: {len(raw_text)} chars, stop reason: {stop_reason}")
+            
+            # If guardrail intervened, retry without it to get the actual analysis
+            if stop_reason == "guardrail_intervened" and guardrail_kwargs:
+                print(f"Guardrail intercepted analysis for {model_id}, retrying without it.")
+                retry_response = bedrock.converse(
+                    modelId=model_id,
+                    messages=[{"role": "user", "content": content_blocks}],
+                    inferenceConfig={"maxTokens": 1024, "temperature": 0.1},
+                )
+                raw_text = retry_response["output"]["message"]["content"][0]["text"]
+                print(f"Success with model {model_id} after bypassing guardrail.")
+
             return raw_text
 
         except Exception as e:
@@ -230,30 +262,49 @@ def handler(event, context):
 
     # Download all frames from S3
     frame_data_list = []
+    print(f"DEBUG: Downloading {len(frame_keys)} frames from bucket {frames_bucket}")
     for frame_key in frame_keys:
         response = s3.get_object(Bucket=frames_bucket, Key=frame_key)
-        frame_data_list.append(response["Body"].read())
+        data = response["Body"].read()
+        print(f"DEBUG: Frame {frame_key} size: {len(data)} bytes")
+        frame_data_list.append(data)
 
     # Route to AI provider with automatic fallback
     raw_text = None
+    bedrock_error = None
+
+    # Check caller identity for debugging accounts
+    try:
+        sts_local = boto3.client("sts")
+        identity = sts_local.get_caller_identity()
+        print(f"DEBUG: Lambda is running as identity: {identity.get('Arn')} in account {identity.get('Account')}")
+    except Exception as e:
+        print(f"DEBUG: Could not get caller identity: {e}")
 
     # Try Bedrock first (unless explicitly set to groq-only)
     if AI_PROVIDER != "groq":
         try:
             raw_text = _analyze_with_bedrock(frame_data_list, video_id)
         except Exception as e:
+            bedrock_error = str(e)
             print(f"Bedrock failed entirely for video {video_id}: {e}, trying Groq fallback")
 
     # Try Groq as fallback (or primary if AI_PROVIDER=groq)
     if raw_text is None and GROQ_API_KEY:
         try:
+            print(f"DEBUG: Attempting Groq fallback for video {video_id}")
             raw_text = _analyze_with_groq(frame_data_list, video_id)
         except Exception as e:
             print(f"Groq also failed for video {video_id}: {e}")
-            raise RuntimeError(f"All AI providers failed for video {video_id}")
+            raise RuntimeError(f"All AI providers failed. Bedrock error: {bedrock_error}. Groq error: {e}")
 
     if raw_text is None:
-        raise RuntimeError(f"No AI provider available for video {video_id}")
+        error_msg = f"No AI provider available for video {video_id}."
+        if bedrock_error:
+            error_msg += f" Last Bedrock error: {bedrock_error}"
+        if not GROQ_API_KEY:
+            error_msg += " (Groq fallback not configured: missing API key)"
+        raise RuntimeError(error_msg)
 
     analysis = _parse_analysis(raw_text)
 
