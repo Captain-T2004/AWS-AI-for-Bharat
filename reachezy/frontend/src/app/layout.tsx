@@ -11,6 +11,10 @@ export const metadata: Metadata = {
       "AI-powered media kits and brand discovery for India's next generation of creators.",
     type: 'website',
   },
+  icons: {
+    icon: '/logo.png',
+    apple: '/logo.png',
+  },
 };
 
 export default function RootLayout({
