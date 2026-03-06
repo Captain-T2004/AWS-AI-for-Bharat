@@ -91,7 +91,7 @@ export default function UploadPage() {
                 <div className="space-y-4 mb-8">
                   {[
                     { icon: 'image_search', label: 'Frame Extraction', status: 'Enabled' },
-                    { icon: 'psychology', label: 'Groq AI Analysis', status: 'Active' },
+                    { icon: 'psychology', label: 'AI Analysis', status: 'Active' },
                     { icon: 'hub', label: 'Vector Embeddings', status: 'Enabled' },
                   ].map(({ icon, label, status }) => (
                     <div key={label} className="flex items-center justify-between p-3 rounded-lg bg-background-light">

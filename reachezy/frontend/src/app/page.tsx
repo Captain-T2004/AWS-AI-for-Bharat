@@ -228,7 +228,7 @@ export default function LandingPage() {
               {[
                 { step: '01', icon: 'person_add', title: 'Create Account', desc: 'Sign up as a creator and set up your profile with your niche and social handle.' },
                 { step: '02', icon: 'upload', title: 'Upload Content', desc: 'Upload 1-5 of your best reels for AI analysis.' },
-                { step: '03', icon: 'psychology', title: 'AI Analysis', desc: 'Groq AI analyzes your style, energy, aesthetic, and production quality.' },
+                { step: '03', icon: 'psychology', title: 'AI Analysis', desc: 'AI analyzes your style, energy, aesthetic, and production quality.' },
                 { step: '04', icon: 'description', title: 'Get Your Kit', desc: 'Share your professional media kit URL with brands and start landing deals.' },
               ].map((item) => (
                 <div key={item.step} className="relative flex flex-col gap-5 rounded-3xl border border-slate-200 bg-white p-8 transition-all hover:border-primary/40 hover:shadow-lg group">
