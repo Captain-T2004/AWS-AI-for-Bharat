@@ -28,6 +28,7 @@ export default function MessagesPage() {
   const [selectedId, setSelectedId] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [userId, setUserId] = useState<string>('');
+  const [showMobileDetails, setShowMobileDetails] = useState(false);
 
   useEffect(() => {
     setPageTitle('Messages');
@@ -85,6 +86,8 @@ export default function MessagesPage() {
           const match = list.find((c) => c.person.id === targetCreatorId || c.id === `new-${targetCreatorId}`);
           if (match) return match.id;
         }
+        // Start with no selection on mobile to show contact list first
+        if (typeof window !== 'undefined' && window.innerWidth < 1024) return '';
         return list[0]?.id || '';
       });
     } catch (e) {
@@ -167,25 +170,34 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="flex h-full overflow-hidden">
-      <ConversationList
-        conversations={conversations}
-        selectedId={selectedId}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        onSelect={setSelectedId}
-      />
+    <div className="flex h-full overflow-hidden relative">
+      <div className={`flex-shrink-0 lg:w-80 h-full ${selectedId ? 'hidden lg:flex' : 'flex w-full'}`}>
+        <ConversationList
+          conversations={conversations}
+          selectedId={selectedId}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onSelect={setSelectedId}
+        />
+      </div>
+      
       {selectedConversation ? (
-        <>
+        <div className={`flex-1 flex h-full ${selectedId ? 'flex' : 'hidden lg:flex'}`}>
           <ChatWindow
             conversation={selectedConversation}
             onSendMessage={handleSendMessage}
             currentUserId={userId}
+            onBack={() => setSelectedId('')}
+            onHeaderClick={() => setShowMobileDetails(true)}
           />
-          <PersonDetails person={selectedConversation.person} />
-        </>
+          <PersonDetails 
+            person={selectedConversation.person} 
+            showOnMobile={showMobileDetails}
+            onClose={() => setShowMobileDetails(false)}
+          />
+        </div>
       ) : (
-        <div className="flex flex-1 items-center justify-center bg-slate-50 text-slate-400">
+        <div className="hidden lg:flex flex-1 items-center justify-center bg-slate-50 text-slate-400">
           <div className="text-center">
             <span className="material-symbols-outlined text-5xl mb-3 opacity-30 block">chat</span>
             <p className="text-sm">Select a conversation to start messaging</p>

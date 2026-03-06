@@ -38,7 +38,7 @@ export default function ConversationList({
   );
 
   return (
-    <div className="flex w-80 flex-col border-r border-slate-200 bg-white">
+    <div className="flex w-full lg:w-80 flex-col border-r border-slate-200 bg-white h-full">
       {/* Header */}
       <div className="flex-shrink-0 p-4">
         <h2 className="text-lg font-bold text-slate-900 mb-3">Messages</h2>

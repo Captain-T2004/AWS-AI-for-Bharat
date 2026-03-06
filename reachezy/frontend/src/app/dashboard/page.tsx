@@ -36,13 +36,57 @@ function formatFollowers(n: number) {
   return String(n);
 }
 
+function DashboardSkeleton() {
+  return (
+    <div className="p-8 max-w-6xl mx-auto space-y-8 animate-pulse">
+      {/* Profile Summary Skeleton */}
+      <section className="bg-white rounded-2xl border border-slate-200 p-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center gap-6">
+            <div className="size-24 rounded-2xl skeleton" />
+            <div className="space-y-3">
+              <div className="h-8 w-48 rounded-lg skeleton" />
+              <div className="h-4 w-32 rounded-lg skeleton" />
+              <div className="flex gap-2">
+                <div className="h-6 w-20 rounded-full skeleton" />
+                <div className="h-6 w-24 rounded-full skeleton" />
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-4">
+            <div className="h-24 w-32 rounded-xl skeleton" />
+            <div className="h-24 w-32 rounded-xl skeleton" />
+          </div>
+        </div>
+      </section>
+
+      {/* Main Grid Skeleton */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="h-80 rounded-2xl border border-slate-200 skeleton" />
+        <div className="h-80 rounded-2xl border border-slate-200 skeleton" />
+      </div>
+
+      {/* Trends Skeleton */}
+      <div className="space-y-4">
+        <div className="h-6 w-40 rounded skeleton" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="h-32 rounded-xl skeleton" />
+          <div className="h-32 rounded-xl skeleton" />
+          <div className="h-32 rounded-xl skeleton" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const router = useRouter();
-  const { profile, setPageTitle } = useDashboard();
+  const { profile, loading, setPageTitle } = useDashboard();
   const [rates, setRates] = useState<Rates | null>(null);
   const [styleProfile, setStyleProfile] = useState<StyleProfile | null>(null);
   const [uploadsCount, setUploadsCount] = useState<number | null>(null);
   const [analysisReady, setAnalysisReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setPageTitle('Dashboard Overview');
@@ -51,6 +95,7 @@ export default function DashboardPage() {
   const loadPageData = useCallback(async () => {
     if (!profile) return;
     try {
+      setError(null);
       const uploadsData = await api.getUploadsCount().catch(() => ({ count: 0 }));
       setUploadsCount(uploadsData.count ?? 0);
 
@@ -65,6 +110,7 @@ export default function DashboardPage() {
       } catch { /* rates not set yet */ }
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
+      setError('Failed to load some dashboard details. Please refresh.');
     }
   }, [profile]);
 
@@ -72,7 +118,30 @@ export default function DashboardPage() {
     loadPageData();
   }, [loadPageData]);
 
-  if (!profile) return null;
+  if (loading) return <DashboardSkeleton />;
+  if (!profile) {
+    if (!loading) router.replace('/');
+    return null;
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center min-h-[60vh]">
+        <div className="size-20 rounded-full bg-red-50 flex items-center justify-center text-red-500 mb-6">
+          <span className="material-symbols-outlined text-4xl">error_outline</span>
+        </div>
+        <h2 className="text-2xl font-black text-slate-900 mb-2">Something went wrong</h2>
+        <p className="text-slate-500 max-w-sm mb-8">{error}</p>
+        <button 
+          onClick={loadPageData}
+          className="flex items-center gap-2 bg-primary text-white font-bold py-3 px-8 rounded-xl hover:opacity-90 transition-opacity"
+        >
+          <span className="material-symbols-outlined">refresh</span>
+          Retry Loading
+        </button>
+      </div>
+    );
+  }
 
   const followerBucket = getFollowerBucket(profile.followers_count);
   const isDemo = profile.cognito_sub?.startsWith('demo_') ?? false;

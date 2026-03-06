@@ -2,6 +2,8 @@ import { Person } from './types';
 
 interface PersonDetailsProps {
   person: Person;
+  showOnMobile?: boolean;
+  onClose?: () => void;
 }
 
 function AvatarFallback({ name, src, className }: { name: string; src?: string; className?: string }) {
@@ -34,10 +36,18 @@ function DetailRow({ icon, label, value }: { icon: string; label: string; value:
   );
 }
 
-export default function PersonDetails({ person }: PersonDetailsProps) {
+export default function PersonDetails({ person, showOnMobile, onClose }: PersonDetailsProps) {
   return (
-    <div className="flex w-80 flex-col border-l border-slate-200 bg-white">
+    <div className={`${showOnMobile ? 'flex fixed inset-0 z-50' : 'hidden lg:flex'} w-full lg:w-80 flex-col border-l border-slate-200 bg-white`}>
       <div className="flex flex-1 flex-col overflow-y-auto p-6">
+        {onClose && (
+          <button 
+            onClick={onClose}
+            className="lg:hidden absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors"
+          >
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        )}
         {/* Avatar & name */}
         <div className="flex flex-col items-center text-center mb-6">
           <AvatarFallback

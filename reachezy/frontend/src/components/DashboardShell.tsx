@@ -1,5 +1,4 @@
-'use client';
-
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { clearToken } from '@/lib/auth';
@@ -36,19 +35,41 @@ export default function DashboardShell({
 }: DashboardShellProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const handleLogout = () => { clearToken(); router.replace('/'); };
   const initials = (displayName || username || 'U')[0].toUpperCase();
 
   return (
     <div className="flex h-screen overflow-hidden bg-background-light font-display">
+      {/* ── Mobile Sidebar Overlay ── */}
+      {isSidebarOpen && (
+        <div 
+          className="sidebar-overlay opacity-100" 
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* ── Sidebar ── */}
-      <aside className="w-64 border-r border-slate-200 bg-white flex flex-col flex-shrink-0">
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 w-64 border-r border-slate-200 bg-white flex flex-col flex-shrink-0 transition-transform duration-300 ease-in-out
+        lg:translate-x-0 lg:static
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
         {/* Logo */}
-        <div className="p-6 flex items-center gap-3">
-          <div className="bg-primary p-2 rounded-lg text-white">
-            <span className="material-symbols-outlined block">auto_awesome</span>
+        <div className="p-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-primary p-2 rounded-lg text-white">
+              <span className="material-symbols-outlined block">auto_awesome</span>
+            </div>
+            <h2 className="text-xl font-bold tracking-tight text-slate-900">ReachEzy</h2>
           </div>
-          <h2 className="text-xl font-bold tracking-tight text-slate-900">ReachEzy</h2>
+          {/* Mobile Close button */}
+          <button 
+            className="lg:hidden p-2 text-slate-400 hover:text-slate-600"
+            onClick={() => setIsSidebarOpen(false)}
+          >
+            <span className="material-symbols-outlined">close</span>
+          </button>
         </div>
 
         {/* Nav links */}
@@ -60,6 +81,7 @@ export default function DashboardShell({
                 key={href}
                 href={href}
                 className={active ? 'nav-link-active' : 'nav-link'}
+                onClick={() => setIsSidebarOpen(false)}
               >
                 <span className="material-symbols-outlined">{icon}</span>
                 {label}
@@ -96,9 +118,19 @@ export default function DashboardShell({
       {/* ── Main Content ── */}
       <main className="flex-1 overflow-hidden flex flex-col">
         {/* Sticky header */}
-        <header className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur-md flex items-center justify-between px-8 sticky top-0 z-10 flex-shrink-0">
-          <h1 className="text-lg font-bold text-slate-900">{title}</h1>
+        <header className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur-md flex items-center justify-between px-4 md:px-8 sticky top-0 z-10 flex-shrink-0">
           <div className="flex items-center gap-4">
+            {/* Mobile Toggle */}
+            <button 
+              className="lg:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-lg"
+              onClick={() => setIsSidebarOpen(true)}
+            >
+              <span className="material-symbols-outlined">menu</span>
+            </button>
+            <h1 className="text-lg font-bold text-slate-900 truncate">{title}</h1>
+          </div>
+          
+          <div className="flex items-center gap-3 md:gap-4">
             <NotificationsDropdown />
             {headerRight}
             {profilePictureUrl ? (
@@ -113,7 +145,7 @@ export default function DashboardShell({
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto w-full">
           {children}
         </div>
       </main>

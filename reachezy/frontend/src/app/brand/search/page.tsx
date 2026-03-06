@@ -75,15 +75,28 @@ export default function BrandSearchPage() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [parsedQuery, setParsedQuery] = useState<ParsedQuery | null>(null);
   const [searchSource, setSearchSource] = useState<string | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [nicheFilter, setNicheFilter] = useState<string | null>(null);
+  const [nicheFilters, setNicheFilters] = useState<string[]>([]);
   const [cityFilter, setCityFilter] = useState('');
-  const [followerFilter, setFollowerFilter] = useState<string | null>(null);
-  const [energyFilter, setEnergyFilter] = useState<string | null>(null);
-  const [aestheticFilter, setAestheticFilter] = useState<string | null>(null);
-  const [priceTierFilter, setPriceTierFilter] = useState<number | null>(null);
+  const [followerFilters, setFollowerFilters] = useState<string[]>([]);
+  const [energyFilters, setEnergyFilters] = useState<string[]>([]);
+  const [aestheticFilters, setAestheticFilters] = useState<string[]>([]);
+  const [priceTierFilters, setPriceTierFilters] = useState<number[]>([]);
   const [barterOnly, setBarterOnly] = useState(false);
+
+  // States for filters actually applied to the list
+  const [appliedFilters, setAppliedFilters] = useState({
+    niches: [] as string[],
+    city: '',
+    followers: [] as string[],
+    energies: [] as string[],
+    aesthetics: [] as string[],
+    priceTiers: [] as number[],
+    barterOnly: false,
+  });
+
   const [sortBy, setSortBy] = useState<SortOption>('followers_desc');
   const [page, setPage] = useState(1);
 
@@ -107,34 +120,99 @@ export default function BrandSearchPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  const handleApplyFilters = () => {
+    setAppliedFilters({
+      niches: nicheFilters,
+      city: cityFilter,
+      followers: followerFilters,
+      energies: energyFilters,
+      aesthetics: aestheticFilters,
+      priceTiers: priceTierFilters,
+      barterOnly,
+    });
+    setIsFilterOpen(false);
+    setPage(1);
+  };
+
   const handleSearch = async () => {
     const q = searchQuery.trim();
-    if (!q) { setParsedQuery(null); setSearchSource(null); loadData(); return; }
+    if (!q) { 
+      setParsedQuery(null); 
+      setSearchSource(null); 
+      loadData(); 
+      return; 
+    }
     setLoading(true);
     try {
       const data = await api.searchCreators(q);
       setAllCreators(data.results || []);
       setParsedQuery(data.parsed || null);
       setSearchSource(data.source || null);
+      
+      if (data.parsed) {
+        const newNiches = data.parsed.niche ? [data.parsed.niche] : [];
+        const newEnergies = data.parsed.energy ? [data.parsed.energy] : [];
+        const newAesthetics = data.parsed.aesthetic ? [data.parsed.aesthetic] : [];
+
+        setNicheFilters(newNiches);
+        if (data.parsed.city) setCityFilter(data.parsed.city);
+        setEnergyFilters(newEnergies);
+        setAestheticFilters(newAesthetics);
+
+        setAppliedFilters({
+          niches: newNiches,
+          city: data.parsed.city || '',
+          followers: followerFilters,
+          energies: newEnergies,
+          aesthetics: newAesthetics,
+          priceTiers: priceTierFilters,
+          barterOnly,
+        });
+      }
     } catch { /* ignore */ }
     finally { setLoading(false); setPage(1); }
   };
 
   const filtered = useMemo(() => {
     let list = [...allCreators];
-    if (nicheFilter) list = list.filter((c) => c.niche === nicheFilter);
-    if (cityFilter.trim()) {
-      const q = cityFilter.trim().toLowerCase();
+    
+    if (appliedFilters.niches.length > 0) {
+      list = list.filter((c) => appliedFilters.niches.includes(c.niche));
+    }
+    
+    if (appliedFilters.city.trim()) {
+      const q = appliedFilters.city.trim().toLowerCase();
       list = list.filter((c) => c.city?.toLowerCase().includes(q));
     }
-    if (followerFilter) {
-      const bucket = FOLLOWER_BUCKETS.find((b) => b.label === followerFilter);
-      if (bucket) list = list.filter((c) => c.followers_count >= bucket.min && c.followers_count < bucket.max);
+    
+    if (appliedFilters.followers.length > 0) {
+      list = list.filter((c) => {
+        return appliedFilters.followers.some(f => {
+          const bucket = FOLLOWER_BUCKETS.find((b) => b.label === f);
+          return bucket && c.followers_count >= bucket.min && c.followers_count < bucket.max;
+        });
+      });
     }
-    if (energyFilter) list = list.filter((c) => c.style_profile?.dominant_energy?.toLowerCase().includes(energyFilter.toLowerCase()));
-    if (aestheticFilter) list = list.filter((c) => c.style_profile?.dominant_aesthetic?.toLowerCase().includes(aestheticFilter.toLowerCase()));
-    if (priceTierFilter !== null) list = list.filter((c) => c.rates && getPriceTierIndex(c.rates) === priceTierFilter);
-    if (barterOnly) list = list.filter((c) => c.rates?.accepts_barter);
+    
+    if (appliedFilters.energies.length > 0) {
+      list = list.filter((c) => {
+        const energy = c.style_profile?.dominant_energy?.toLowerCase();
+        return energy && appliedFilters.energies.some(e => energy.includes(e.toLowerCase()));
+      });
+    }
+    
+    if (appliedFilters.aesthetics.length > 0) {
+      list = list.filter((c) => {
+        const aesthetic = c.style_profile?.dominant_aesthetic?.toLowerCase();
+        return aesthetic && appliedFilters.aesthetics.some(a => aesthetic.includes(a.toLowerCase()));
+      });
+    }
+    
+    if (appliedFilters.priceTiers.length > 0) {
+      list = list.filter((c) => c.rates && appliedFilters.priceTiers.includes(getPriceTierIndex(c.rates)));
+    }
+    
+    if (appliedFilters.barterOnly) list = list.filter((c) => c.rates?.accepts_barter);
 
     list.sort((a, b) => {
       if (sortBy === 'followers_desc') return b.followers_count - a.followers_count;
@@ -142,12 +220,12 @@ export default function BrandSearchPage() {
       return (a.display_name || a.username).localeCompare(b.display_name || b.username);
     });
     return list;
-  }, [allCreators, nicheFilter, cityFilter, followerFilter, energyFilter, aestheticFilter, priceTierFilter, barterOnly, sortBy]);
+  }, [allCreators, appliedFilters, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  useEffect(() => { setPage(1); }, [nicheFilter, cityFilter, followerFilter, energyFilter, aestheticFilter, priceTierFilter, barterOnly, sortBy]);
+  useEffect(() => { setPage(1); }, [appliedFilters, sortBy]);
 
   const handleToggleSave = async (creatorId: string) => {
     setSavingId(creatorId);
@@ -163,14 +241,44 @@ export default function BrandSearchPage() {
     finally { setSavingId(null); }
   };
 
-  const hasActiveFilters = !!(searchQuery || nicheFilter || cityFilter || followerFilter || energyFilter || aestheticFilter || priceTierFilter !== null || barterOnly || sortBy !== 'followers_desc');
+  const hasActiveFilters = !!(
+    searchQuery || 
+    appliedFilters.niches.length > 0 || 
+    appliedFilters.city || 
+    appliedFilters.followers.length > 0 || 
+    appliedFilters.energies.length > 0 || 
+    appliedFilters.aesthetics.length > 0 || 
+    appliedFilters.priceTiers.length > 0 || 
+    appliedFilters.barterOnly || 
+    sortBy !== 'followers_desc'
+  );
 
   const clearAllFilters = () => {
-    setSearchQuery(''); setNicheFilter(null); setCityFilter(''); setFollowerFilter(null);
-    setEnergyFilter(null); setAestheticFilter(null); setPriceTierFilter(null);
-    setBarterOnly(false); setSortBy('followers_desc');
-    setParsedQuery(null); setSearchSource(null);
+    setSearchQuery(''); 
+    setNicheFilters([]); 
+    setCityFilter(''); 
+    setFollowerFilters([]);
+    setEnergyFilters([]); 
+    setAestheticFilters([]); 
+    setPriceTierFilters([]);
+    setBarterOnly(false); 
+    setSortBy('followers_desc');
+    setParsedQuery(null); 
+    setSearchSource(null);
+    setAppliedFilters({
+      niches: [],
+      city: '',
+      followers: [],
+      energies: [],
+      aesthetics: [],
+      priceTiers: [],
+      barterOnly: false,
+    });
     loadData();
+  };
+
+  const toggleFilter = (list: any[], setList: (l: any[]) => void, item: any) => {
+    setList(list.includes(item) ? list.filter(i => i !== item) : [...list, item]);
   };
 
   const pillClass = (active: boolean) =>
@@ -181,45 +289,89 @@ export default function BrandSearchPage() {
   return (
     // h-full overflow-hidden so the inner content area gets its own scroll
     <div className="h-full overflow-hidden flex flex-col">
+      {/* Mobile Header Toggle */}
+      <div className="lg:hidden p-4 border-b border-slate-200 bg-white sticky top-0 z-20 space-y-3">
+        <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }} className="flex gap-2">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search creators..."
+            className="input-field flex-1 text-sm h-11"
+          />
+          <button type="submit" className="btn-primary shrink-0 !px-4">
+            <span className="material-symbols-outlined">search</span>
+          </button>
+        </form>
+        <div className="flex items-center justify-between">
+          <button 
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            className="flex items-center gap-2 text-sm font-bold text-slate-700 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 transition-all"
+          >
+            <span className="material-symbols-outlined text-lg">tune</span>
+            Filters
+            {hasActiveFilters && (
+              <span className="size-2 rounded-full bg-primary" />
+            )}
+          </button>
+          <div className="text-xs font-bold text-slate-400">
+            {filtered.length} Results
+          </div>
+        </div>
+      </div>
+
       <div className="flex flex-1 overflow-hidden gap-0">
 
         {/* Filter sidebar */}
-        <aside className="hidden lg:flex w-64 flex-shrink-0 flex-col border-r border-slate-200 bg-white overflow-y-auto">
+        <aside className={`
+          ${isFilterOpen ? 'flex' : 'hidden'} lg:flex 
+          fixed inset-0 z-40 lg:static w-full lg:w-64 flex-col border-r border-slate-200 bg-white overflow-y-auto
+        `}>
           <div className="p-5 space-y-6">
-            {/* Search */}
-            <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">AI Search</p>
-              <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }} className="flex gap-2">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="e.g. beauty creators Mumbai..."
-                  className="input-field flex-1 text-sm"
-                />
-                <button type="submit" className="btn-primary shrink-0 !px-3">
-                  <span className="material-symbols-outlined text-sm">search</span>
-                </button>
-              </form>
+            {/* Mobile Header for Filters */}
+            <div className="lg:hidden flex items-center justify-between mb-4">
+              <h3 className="text-lg font-black text-slate-900">Filters</h3>
+              <button 
+                onClick={() => setIsFilterOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-600"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
             </div>
 
-            {hasActiveFilters && (
+            {/* Apply Button */}
+            <div className="sticky bottom-0 lg:static bg-white pt-2 lg:pt-0 pb-4 lg:pb-0 z-10 space-y-2">
               <button
-                onClick={clearAllFilters}
-                className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-600 transition-colors"
+                onClick={handleApplyFilters}
+                className="btn-primary w-full py-3"
               >
-                <span className="material-symbols-outlined text-sm">close</span>
-                Clear All Filters
+                Apply Filters
               </button>
-            )}
+              
+              {hasActiveFilters && (
+                <button
+                  onClick={clearAllFilters}
+                  className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-600 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-sm">close</span>
+                  Clear All Filters
+                </button>
+              )}
+            </div>
 
             {/* Niche */}
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Niche</p>
               <div className="flex flex-wrap gap-1.5">
-                <button onClick={() => setNicheFilter(null)} className={pillClass(!nicheFilter)}>All</button>
+                <button onClick={() => setNicheFilters([])} className={pillClass(nicheFilters.length === 0)}>All</button>
                 {NICHES.map((niche) => (
-                  <button key={niche} onClick={() => setNicheFilter(nicheFilter === niche ? null : niche)} className={pillClass(nicheFilter === niche)}>{niche}</button>
+                  <button 
+                    key={niche} 
+                    onClick={() => toggleFilter(nicheFilters, setNicheFilters, niche)} 
+                    className={pillClass(nicheFilters.includes(niche))}
+                  >
+                    {niche}
+                  </button>
                 ))}
               </div>
             </div>
@@ -234,9 +386,15 @@ export default function BrandSearchPage() {
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Followers</p>
               <div className="flex flex-wrap gap-1.5">
-                <button onClick={() => setFollowerFilter(null)} className={pillClass(!followerFilter)}>All</button>
+                <button onClick={() => setFollowerFilters([])} className={pillClass(followerFilters.length === 0)}>All</button>
                 {FOLLOWER_BUCKETS.map((b) => (
-                  <button key={b.label} onClick={() => setFollowerFilter(followerFilter === b.label ? null : b.label)} className={pillClass(followerFilter === b.label)}>{b.label}</button>
+                  <button 
+                    key={b.label} 
+                    onClick={() => toggleFilter(followerFilters, setFollowerFilters, b.label)} 
+                    className={pillClass(followerFilters.includes(b.label))}
+                  >
+                    {b.label}
+                  </button>
                 ))}
               </div>
             </div>
@@ -245,8 +403,16 @@ export default function BrandSearchPage() {
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Energy</p>
               <div className="flex flex-wrap gap-1.5">
-                <button onClick={() => setEnergyFilter(null)} className={pillClass(!energyFilter)}>All</button>
-                {ENERGIES.map((e) => <button key={e} onClick={() => setEnergyFilter(energyFilter === e ? null : e)} className={pillClass(energyFilter === e)}>{e}</button>)}
+                <button onClick={() => setEnergyFilters([])} className={pillClass(energyFilters.length === 0)}>All</button>
+                {ENERGIES.map((e) => (
+                  <button 
+                    key={e} 
+                    onClick={() => toggleFilter(energyFilters, setEnergyFilters, e)} 
+                    className={pillClass(energyFilters.includes(e))}
+                  >
+                    {e}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -254,8 +420,16 @@ export default function BrandSearchPage() {
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Aesthetic</p>
               <div className="flex flex-wrap gap-1.5">
-                <button onClick={() => setAestheticFilter(null)} className={pillClass(!aestheticFilter)}>All</button>
-                {AESTHETICS.map((a) => <button key={a} onClick={() => setAestheticFilter(aestheticFilter === a ? null : a)} className={pillClass(aestheticFilter === a)}>{a}</button>)}
+                <button onClick={() => setAestheticFilters([])} className={pillClass(aestheticFilters.length === 0)}>All</button>
+                {AESTHETICS.map((a) => (
+                  <button 
+                    key={a} 
+                    onClick={() => toggleFilter(aestheticFilters, setAestheticFilters, a)} 
+                    className={pillClass(aestheticFilters.includes(a))}
+                  >
+                    {a}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -263,9 +437,15 @@ export default function BrandSearchPage() {
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Price Tier</p>
               <div className="flex flex-wrap gap-1.5">
-                <button onClick={() => setPriceTierFilter(null)} className={pillClass(priceTierFilter === null)}>All</button>
+                <button onClick={() => setPriceTierFilters([])} className={pillClass(priceTierFilters.length === 0)}>All</button>
                 {PRICE_TIERS.map((tier, idx) => (
-                  <button key={tier.label} onClick={() => setPriceTierFilter(priceTierFilter === idx ? null : idx)} className={pillClass(priceTierFilter === idx)}>{tier.label}</button>
+                  <button 
+                    key={tier.label} 
+                    onClick={() => toggleFilter(priceTierFilters, setPriceTierFilters, idx)} 
+                    className={pillClass(priceTierFilters.includes(idx))}
+                  >
+                    {tier.label}
+                  </button>
                 ))}
               </div>
             </div>
@@ -289,7 +469,26 @@ export default function BrandSearchPage() {
         </aside>
 
         {/* Results */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 lg:p-6">
+          {/* Desktop Search Bar (Always visible) */}
+          <div className="hidden lg:block mb-6 max-w-2xl">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">AI Creator Search</p>
+            <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }} className="flex gap-2">
+              <div className="relative flex-1">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="e.g. fashion creators in Mumbai with high energy..."
+                  className="input-field w-full pl-10"
+                />
+              </div>
+              <button type="submit" className="btn-primary px-6">
+                Search
+              </button>
+            </form>
+          </div>
           {/* AI parsed query banner */}
           {parsedQuery && (parsedQuery.niche || parsedQuery.city || parsedQuery.energy || parsedQuery.aesthetic || (parsedQuery.topics && parsedQuery.topics.length > 0)) && (
             <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
@@ -308,8 +507,10 @@ export default function BrandSearchPage() {
           )}
 
           {loading ? (
-            <div className="flex h-64 items-center justify-center">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="h-80 rounded-2xl border border-slate-200 skeleton animate-pulse" />
+              ))}
             </div>
           ) : (
             <>

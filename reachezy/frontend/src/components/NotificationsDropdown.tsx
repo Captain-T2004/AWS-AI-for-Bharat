@@ -1,13 +1,7 @@
-'use client';
-
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { getUserRole, getToken } from '@/lib/auth';
-
-function authHeaders(): Record<string, string> {
-  const token = getToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
+import { getUserRole } from '@/lib/auth';
+import { api } from '@/lib/api';
 
 interface Notification {
   id: string;
@@ -28,35 +22,25 @@ export default function NotificationsDropdown() {
 
   const fetchUnreadCount = async () => {
     try {
-      const res = await fetch('/api/notifications/unread', { headers: authHeaders() });
-      if (res.ok) {
-        const data = await res.json();
-        setUnreadCount(data.unreadCount || 0);
-      }
+      const data = await api.getUnreadNotificationsCount();
+      setUnreadCount(data.unreadCount || 0);
     } catch (e) {
-      console.error(e);
+      console.error('Failed to fetch unread count:', e);
     }
   };
 
   const fetchNotifications = async () => {
     try {
-      const res = await fetch('/api/notifications', { headers: authHeaders() });
-      if (res.ok) {
-        const data = await res.json();
-        setNotifications(data);
-      }
+      const data = await api.getNotifications();
+      setNotifications(data);
     } catch (e) {
-      console.error(e);
+      console.error('Failed to fetch notifications:', e);
     }
   };
 
   const markAsRead = async (id?: string) => {
     try {
-      await fetch('/api/notifications', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify(id ? { id } : {}),
-      });
+      await api.markNotificationsAsRead(id);
       if (id) {
         setNotifications((prev) =>
           prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
@@ -67,7 +51,7 @@ export default function NotificationsDropdown() {
         setUnreadCount(0);
       }
     } catch (e) {
-      console.error(e);
+      console.error('Failed to mark as read:', e);
     }
   };
 
@@ -141,9 +125,12 @@ export default function NotificationsDropdown() {
           
           <div className="max-h-[65vh] overflow-y-auto w-full">
             {notifications.length === 0 ? (
-              <div className="px-5 py-8 text-center text-slate-400">
-                <span className="material-symbols-outlined text-4xl mb-2 opacity-50 block">notifications_off</span>
-                <p className="text-sm">No notifications yet</p>
+              <div className="px-8 py-12 text-center">
+                <div className="size-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-200">
+                  <span className="material-symbols-outlined text-4xl">notifications_off</span>
+                </div>
+                <h4 className="font-bold text-slate-900 mb-1">No notifications yet</h4>
+                <p className="text-sm text-slate-500 max-w-[200px] mx-auto">We'll let you know when there's an update on your videos or a new message.</p>
               </div>
             ) : (
               <ul className="divide-y divide-slate-100 pb-1">

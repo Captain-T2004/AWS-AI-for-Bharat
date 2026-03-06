@@ -25,6 +25,7 @@ export default function UploadPage() {
   const [isComplete, setIsComplete] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [processStep, setProcessStep] = useState(0);
 
   useEffect(() => {
     async function loadProfile() {
@@ -46,16 +47,15 @@ export default function UploadPage() {
   const handleUploadComplete = async () => {
     setIsComplete(true);
     setIsAnalyzing(true);
+    setProcessStep(0);
     
-    // Note: We DO NOT call api.startAnalysis() here anymore!
-    // AWS EventBridge is configured (in pipeline_stack.py) to automatically 
-    // trigger the Step Functions pipeline the moment the video finishes uploading to S3.
-    // Calling it manually here causes duplicate (2x) executions.
-    
+    // Cycle through fake steps for better UX
+    setTimeout(() => setProcessStep(1), 2500); // Start AI analysis
+    setTimeout(() => setProcessStep(2), 6500); // Start media kit gen
     setTimeout(() => {
       setIsAnalyzing(false);
       router.push('/dashboard');
-    }, 4000); // give it a slightly longer fake loader since we're not awaiting an API call
+    }, 9500);
   };
 
   if (loading) {
@@ -125,19 +125,19 @@ export default function UploadPage() {
             </p>
             <div className="space-y-3 text-left">
               {[
-                { label: 'Videos uploaded successfully', done: true },
-                { label: 'Running AI style analysis...', done: false, spin: true },
-                { label: 'Generating media kit', done: false },
+                { label: 'Videos uploaded successfully', done: processStep >= 0, spin: false },
+                { label: 'Running AI style analysis...', done: processStep >= 1, spin: processStep === 1 },
+                { label: 'Generating media kit...', done: processStep >= 2, spin: processStep === 2 },
               ].map(({ label, done, spin }) => (
-                <div key={label} className="flex items-center gap-3 rounded-lg bg-background-light px-4 py-3 text-sm">
-                  {done ? (
+                <div key={label} className="flex items-center gap-3 rounded-lg bg-background-light px-4 py-3 text-sm transition-all duration-300">
+                  {done && !spin ? (
                     <span className="material-symbols-outlined text-emerald-500">check_circle</span>
                   ) : spin ? (
                     <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary/30 border-t-primary flex-shrink-0" />
                   ) : (
                     <div className="h-5 w-5 rounded-full border-2 border-slate-200 flex-shrink-0" />
                   )}
-                  <span className={done ? 'text-slate-700' : spin ? 'text-primary font-medium' : 'text-slate-400'}>{label}</span>
+                  <span className={done && !spin ? 'text-slate-500' : spin ? 'text-primary font-bold' : 'text-slate-400'}>{label}</span>
                 </div>
               ))}
             </div>

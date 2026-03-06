@@ -68,8 +68,10 @@ export default function BrandWishlistPage() {
       <div className="p-8 max-w-6xl mx-auto">
 
         {loading && (
-          <div className="flex h-64 items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-80 rounded-2xl border border-slate-200 skeleton animate-pulse" />
+            ))}
           </div>
         )}
 

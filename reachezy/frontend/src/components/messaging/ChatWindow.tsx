@@ -7,6 +7,8 @@ interface ChatWindowProps {
   conversation: Conversation;
   onSendMessage: (text: string) => void;
   currentUserId?: string;
+  onBack?: () => void;
+  onHeaderClick?: () => void;
 }
 
 function AvatarFallback({ name, src, className }: { name: string; src?: string; className?: string }) {
@@ -27,7 +29,7 @@ function AvatarFallback({ name, src, className }: { name: string; src?: string; 
   );
 }
 
-export default function ChatWindow({ conversation, onSendMessage, currentUserId }: ChatWindowProps) {
+export default function ChatWindow({ conversation, onSendMessage, currentUserId, onBack, onHeaderClick }: ChatWindowProps) {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -52,13 +54,24 @@ export default function ChatWindow({ conversation, onSendMessage, currentUserId 
   const { person, messages } = conversation;
 
   return (
-    <div className="flex flex-1 flex-col bg-white">
+    <div className="flex flex-1 flex-col bg-white h-full w-full">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-slate-200 px-6 py-4 flex-shrink-0">
+      <div 
+        className={`flex items-center gap-3 border-b border-slate-200 px-4 md:px-6 py-4 flex-shrink-0 ${onHeaderClick ? 'cursor-pointer hover:bg-slate-50 transition-colors' : ''}`}
+        onClick={onHeaderClick}
+      >
+        {onBack && (
+          <button 
+            onClick={(e) => { e.stopPropagation(); onBack(); }}
+            className="lg:hidden p-2 -ml-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors"
+          >
+            <span className="material-symbols-outlined">arrow_back</span>
+          </button>
+        )}
         <AvatarFallback name={person.name} src={person.avatar} className="size-10 text-sm" />
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900">{person.name}</h3>
-          <p className="text-xs text-slate-500">{person.subtitle}</p>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-semibold text-slate-900 truncate">{person.name}</h3>
+          <p className="text-xs text-slate-500 truncate">{person.subtitle}</p>
         </div>
       </div>
 

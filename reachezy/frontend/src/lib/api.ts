@@ -175,4 +175,13 @@ export const api = {
   // Brand search (universal search)
   searchBrands: (q: string) => fetchLocal(`/search/brands?q=${encodeURIComponent(q)}`),
   getAllBrands: () => fetchLocal('/search/brands'),
+  
+  // Notifications
+  getUnreadNotificationsCount: () => fetchLocal('/notifications/unread'),
+  getNotifications: () => fetchLocal('/notifications'),
+  markNotificationsAsRead: (id?: string) =>
+    fetchLocal('/notifications', {
+      method: 'PUT',
+      body: JSON.stringify(id ? { id } : {}),
+    }),
 };

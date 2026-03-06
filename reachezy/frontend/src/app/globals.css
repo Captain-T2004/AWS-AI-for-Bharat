@@ -73,4 +73,32 @@ body {
   .badge-slate {
     @apply badge bg-slate-100 text-slate-600;
   }
+
+  /* ─── Mobile Sidebar ─── */
+  .sidebar-overlay {
+    @apply fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm lg:hidden transition-opacity duration-300;
+  }
+
+  /* ─── Skeleton Loading ─── */
+  .skeleton {
+    @apply relative overflow-hidden bg-slate-200;
+  }
+
+  .skeleton::after {
+    @apply absolute inset-0 -translate-x-full;
+    content: "";
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.4),
+      transparent
+    );
+    animation: shimmer 1.5s infinite;
+  }
+
+  @keyframes shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
 }
